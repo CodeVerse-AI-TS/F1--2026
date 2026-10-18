@@ -1,0 +1,54 @@
+{
+  "id": "look-golden-hour",
+  "title": "Golden hour: photo sky, low warm sun, long shadows",
+  "kind": "look",
+  "genres": [
+	"any",
+	"adventure",
+	"open-world",
+	"fantasy",
+	"racing",
+    "exploration"
+  ],
+  "summary": "Drop-in outdoor lighting: real photographed sunset sky (Poly Haven HDR, sun-aligned), warm sun 13 deg above the horizon, long blue-grey shadows, warm haze and soft glow.",
+  "use_when": "Any outdoor 3D game that should look cinematic or realistic in the first shot: sunset, golden hour, late afternoon, warm, beautiful, photo-real sky.",
+  "how_to_use": "Instance res://starter/look-golden-hour/look.tscn ONCE as a child of the main 3D scene root (it is a Node3D at the origin; leave it unscaled). It contains WorldEnvironment (environment res://starter/look-golden-hour/env.tres) and a DirectionalLight3D named 'Sun'. The look's script (look_rig.gd, take_over=true) hands its Environment to any other WorldEnvironment and hides every DirectionalLight3D outside the look at runtime, so you do not have to delete old defaults (set take_over=false on the look root to keep your own sun). Do NOT rotate the 'Sun' node: the photographed sun in the HDR is aligned to rotation (-13, -145) deg; to change which way the sunset faces, turn your level instead. env.tres is tuned for the Compatibility renderer; Forward+ values live in the look root's forward_plus_overrides. Sun: colour (1, 0.76, 0.49), energy 1.6, shadows to 80 m. Camera looking toward -X/-Z faces the sun (backlit, most dramatic); shadows fall toward +X/+Z. The sky below the horizon is a warm haze, so a ground plane of any size works.",
+  "entry": [
+    "res://starter/look-golden-hour/look.tscn"
+  ],
+  "contents": [
+	{
+	  "path": "look.tscn",
+	  "what": "LookGoldenHour: WorldEnvironment + Sun (rotation -13, -145 deg)"
+	},
+	{
+	  "path": "env.tres",
+	  "what": "Environment: photo sky, sky ambient 0.75, Filmic, glow 0.85 threshold, warm exponential fog 0.0032"
+	},
+	{
+	  "path": "golden_sky.gdshader",
+	  "what": "sky shader: HDR panorama rotated to the sun, ground haze ramp, sun glare"
+	},
+	{
+	  "path": "kloppenheim_06_puresky_2k.hdr",
+	  "what": "2048x1024 CC0 HDR panorama (4.4 MB)"
+	},
+	{
+	  "path": "look_rig.gd",
+	  "what": "take_over + Forward+ overrides"
+	}
+  ],
+  "deps": [],
+  "scale": "no geometry; place at the origin",
+  "license": "cc0",
+  "credit": "Kloppenheim 06 (Pure Sky) by Greg Zaal and Jarod Guest, Poly Haven (polyhaven.com), CC0",
+  "provenance": "HDR downloaded from Poly Haven (CC0), unmodified, sha256 99451201586489ef3288c97bfac2a2ac232a5491c51a1faf0ec8ea39f3ccd533, https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/kloppenheim_06_puresky_2k.hdr; sky shader, sun alignment and lighting values made by Summer (Lantern Hollow), retuned for Compatibility (volumetric fog replaced by exponential fog)",
+  "source": "lantern-hollow@66b75b8:game/assets/sky/kloppenheim_06_puresky_2k.hdr, art/sky/photo_sky.gdshader, art/sky/sun_alignment.json, game/living/shaders/weather_sky.gdshader, game/realism/material_pass.gd (_tune_lighting)",
+  "verified": {
+	"compatibility": true,
+	"forward_plus": true,
+	"notes": "demo.tscn rendered in Compatibility and Forward+ on macOS (Metal, 1280x720) with no SCRIPT ERROR or shader errors; fresh_test (clean cloud project + preview stage) imports and renders in Compatibility with no errors. Not run in a real browser (WebGL2) or on the cloud's Linux/Mesa GL. Compatibility and Forward+ look nearly identical. Volumetric fog from the source replaced by exponential fog. Fresh test shows the look taking over the stage's own WorldEnvironment/sun. v1.1 (2026-10-03, owner rule: building blocks only): demo scene and demo scripts moved out; the remaining pieces are unchanged."
+  },
+  "wow": 5,
+  "bytes": 4461959
+}
