@@ -1,0 +1,144 @@
+{
+ "id": "mat-urban",
+ "title": "Urban materials: concrete, asphalt, ceramic and stone tiles, white and black marble",
+ "kind": "material",
+ "genres": [
+  "city",
+  "modern",
+  "shooter",
+  "racing",
+  "interior",
+  "any-3d"
+ ],
+ "summary": "6 tiling 1K PBR materials for modern spaces: concrete, asphalt, tiles_white, tiles_stone, marble_white, marble_black; triplanar + UV versions.",
+ "use_when": "Modern or urban scenes: roads, parking lots, bunkers, arenas, lobbies, bathrooms, labs, temples, museum floors.",
+ "how_to_use": "Assign with mesh_instance.material_override = load(\"res://starter/mat-urban/<name>_triplanar.tres\") (or CSGShape3D.material = ...). _triplanar files map in world space at real-world scale with no UVs: use them for level geometry, CSG, BoxMesh/PlaneMesh floors and walls, terrain chunks; pieces placed side by side tile seamlessly. Do not use _triplanar on moving or animated objects (the texture slides); use <name>.tres there and set uv1_scale to mesh size in metres divided by the repeat size. To tint, duplicate the material and set albedo_color. Marble and white tiles are glossy (roughness about 0.05-0.3) and look best with a sky or reflection probe in the scene.",
+ "entry": [
+  "res://starter/mat-urban/concrete_triplanar.tres",
+  "res://starter/mat-urban/asphalt_triplanar.tres",
+  "res://starter/mat-urban/tiles_white_triplanar.tres",
+  "res://starter/mat-urban/tiles_stone_triplanar.tres",
+  "res://starter/mat-urban/marble_white_triplanar.tres",
+  "res://starter/mat-urban/marble_black_triplanar.tres"
+ ],
+ "contents": [
+  {
+   "path": "concrete_triplanar.tres",
+   "what": "mid-grey smooth worn concrete; world-triplanar, one repeat = 2 m, no UVs needed"
+  },
+  {
+   "path": "concrete.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 2 m)"
+  },
+  {
+   "path": "asphalt_triplanar.tres",
+   "what": "dark grey road asphalt; world-triplanar, one repeat = 3 m, no UVs needed"
+  },
+  {
+   "path": "asphalt.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 3 m)"
+  },
+  {
+   "path": "tiles_white_triplanar.tres",
+   "what": "glossy white square ceramic tiles, grey grout (kitchens, labs, bathrooms); world-triplanar, one repeat = 1 m, no UVs needed"
+  },
+  {
+   "path": "tiles_white.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 1 m)"
+  },
+  {
+   "path": "tiles_stone_triplanar.tres",
+   "what": "beige travertine floor tiles (temples, plazas, villas); world-triplanar, one repeat = 2 m, no UVs needed"
+  },
+  {
+   "path": "tiles_stone.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 2 m)"
+  },
+  {
+   "path": "marble_white_triplanar.tres",
+   "what": "polished white marble with grey veins; world-triplanar, one repeat = 1.5 m, no UVs needed"
+  },
+  {
+   "path": "marble_white.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 1.5 m)"
+  },
+  {
+   "path": "marble_black_triplanar.tres",
+   "what": "polished black marble with white veins; world-triplanar, one repeat = 1.5 m, no UVs needed"
+  },
+  {
+   "path": "marble_black.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 1.5 m)"
+  },
+  {
+   "path": "textures/",
+   "what": "1024 px JPG maps: *_albedo (sRGB), *_normal (OpenGL +Y), *_rough, optional *_metal / *_emission"
+  }
+ ],
+ "deps": [],
+ "scale": "metres; world-triplanar materials tile at the stated physical repeat size",
+ "license": "cc0",
+ "credit": "",
+ "provenance": "ambientCG CC0 1K-JPG maps re-encoded (albedo x AO 40-50 %). Concrete032, Marble012 and Marble002 are the sets found as 217 duplicate copies in template-3d-shooter-arena@065a255; one canonical copy of each was downloaded from ambientCG instead.",
+ "source": "ambientcg.com 1K-JPG archives (URL + sha256 per material in source_detail)",
+ "source_detail": [
+  {
+   "asset": "Concrete032",
+   "page": "https://ambientcg.com/a/Concrete032",
+   "download": "https://ambientcg.com/get?file=Concrete032_1K-JPG.zip",
+   "archive_sha256": "49ce4fe78bf562376a2b5bdd7ecc11a89a433b30194a74722316f880b07d2c2c",
+   "license": "CC0-1.0",
+   "albedo_note": "albedo multiplied by ambient occlusion at 40%",
+   "material": "concrete"
+  },
+  {
+   "asset": "Asphalt031",
+   "page": "https://ambientcg.com/a/Asphalt031",
+   "download": "https://ambientcg.com/get?file=Asphalt031_1K-JPG.zip",
+   "archive_sha256": "f98114b8fb083fc65925c3b4568b131e37c9a23357d432a16e59676dbc69f964",
+   "license": "CC0-1.0",
+   "albedo_note": "albedo multiplied by ambient occlusion at 40%",
+   "material": "asphalt"
+  },
+  {
+   "asset": "Tiles107",
+   "page": "https://ambientcg.com/a/Tiles107",
+   "download": "https://ambientcg.com/get?file=Tiles107_1K-JPG.zip",
+   "archive_sha256": "ec41de6439d087cbd4b88ecd373cf240206715a3b3e022c0d556f9eb677940d0",
+   "license": "CC0-1.0",
+   "albedo_note": "albedo multiplied by ambient occlusion at 50%",
+   "material": "tiles_white"
+  },
+  {
+   "asset": "Tiles143",
+   "page": "https://ambientcg.com/a/Tiles143",
+   "download": "https://ambientcg.com/get?file=Tiles143_1K-JPG.zip",
+   "archive_sha256": "afbda7adaf4c0048a9224a09ab326fe0f8313e9add1343ad8c09c157a98d881f",
+   "license": "CC0-1.0",
+   "material": "tiles_stone"
+  },
+  {
+   "asset": "Marble012",
+   "page": "https://ambientcg.com/a/Marble012",
+   "download": "https://ambientcg.com/get?file=Marble012_1K-JPG.zip",
+   "archive_sha256": "b04384c6d49ce73baeb70db7ea4abfe9948fc9b74b9fd92c3766970662bf2c43",
+   "license": "CC0-1.0",
+   "material": "marble_white"
+  },
+  {
+   "asset": "Marble002",
+   "page": "https://ambientcg.com/a/Marble002",
+   "download": "https://ambientcg.com/get?file=Marble002_1K-JPG.zip",
+   "archive_sha256": "6ac9604f331d5b58b98c648c7c95629f442dd633a336b33f39073170733e07d0",
+   "license": "CC0-1.0",
+   "material": "marble_black"
+  }
+ ],
+ "verified": {
+  "compatibility": true,
+  "forward_plus": true,
+  "notes": "tools/shoot.sh rendered demo.tscn in Compatibility and Forward+ with no SCRIPT/Parse/shader errors in either log; Compatibility images inspected; tools/fresh_test.sh imported and rendered cleanly in a fresh cloud project. Previews/shots use work/u03-materials/project/tools/mat_stage.tscn (preview_stage with AgX tonemap, exposure 0.75, sky ambient 0.6, darker floor) because the shared preview_stage's sky ambient + sky specular washes textured materials out in Compatibility (Forward+ is fine); fresh_test renders with preview_stage look washed for that reason only. v1.1 (2026-10-03, owner rule: building blocks only): demo scene and demo scripts moved out; the remaining pieces are unchanged."
+ },
+ "wow": 3,
+ "bytes": 4203503
+}
