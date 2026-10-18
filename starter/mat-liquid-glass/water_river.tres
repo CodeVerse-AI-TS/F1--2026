@@ -1,0 +1,16 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://starter/mat-liquid-glass/water.gdshader" id="1"]
+
+[resource]
+resource_name = "water_river"
+shader = ExtResource("1")
+shader_parameter/deep_color = Color(0.022, 0.115, 0.135, 1)
+shader_parameter/shallow_color = Color(0.085, 0.27, 0.23, 1)
+shader_parameter/flow_direction = Vector2(0, 1)
+shader_parameter/flow_speed = 0.8
+shader_parameter/foam_amount = 0.5
+shader_parameter/river_banks = true
+shader_parameter/channel_origin = Vector2(0, 0)
+shader_parameter/channel_side = Vector2(1, 0)
+shader_parameter/channel_half_width = 2.25

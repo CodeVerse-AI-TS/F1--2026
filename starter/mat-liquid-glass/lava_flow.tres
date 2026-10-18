@@ -1,0 +1,19 @@
+[gd_resource type="ShaderMaterial" load_steps=5 format=3]
+
+[ext_resource type="Shader" path="res://starter/mat-liquid-glass/lava_flow.gdshader" id="1"]
+[ext_resource type="Texture2D" path="res://starter/mat-liquid-glass/textures/lava_molten_albedo.jpg" id="2"]
+[ext_resource type="Texture2D" path="res://starter/mat-liquid-glass/textures/lava_molten_emission.jpg" id="3"]
+[ext_resource type="Texture2D" path="res://starter/mat-liquid-glass/textures/lava_molten_normal.jpg" id="4"]
+
+[resource]
+resource_name = "lava_flow"
+shader = ExtResource("1")
+shader_parameter/lava_albedo = ExtResource("2")
+shader_parameter/lava_emission = ExtResource("3")
+shader_parameter/lava_normal = ExtResource("4")
+shader_parameter/tile_metres = 3.0
+shader_parameter/flow = Vector2(0.02, 0.035)
+shader_parameter/emission_energy = 1.5
+shader_parameter/glow_tint = Color(1, 0.5, 0.25, 1)
+shader_parameter/albedo_strength = 0.25
+shader_parameter/pulse = 0.35

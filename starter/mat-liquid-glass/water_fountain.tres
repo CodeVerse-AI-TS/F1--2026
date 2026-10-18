@@ -1,0 +1,9 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://starter/mat-liquid-glass/water_ripple.gdshader" id="1"]
+
+[resource]
+resource_name = "water_fountain"
+shader = ExtResource("1")
+shader_parameter/water_color = Color(0.035, 0.2, 0.19, 1)
+shader_parameter/ring_color = Color(0.19, 0.39, 0.31, 1)

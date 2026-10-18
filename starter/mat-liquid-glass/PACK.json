@@ -1,0 +1,147 @@
+{
+ "id": "mat-liquid-glass",
+ "title": "Water, glass, ice and lava materials",
+ "kind": "material",
+ "genres": [
+  "any-3d",
+  "fantasy",
+  "adventure",
+  "nature",
+  "city",
+  "volcano"
+ ],
+ "summary": "Animated Compatibility-safe water shader with lake/river/ocean/pool presets, fountain ripple water, clear/tinted/frosted glass, ice, lava rock, molten lava and an animated lava_flow shader.",
+ "use_when": "Lakes, rivers, sea, pools, fountains, windows and glass panels, ice caves, volcano and lava levels.",
+ "how_to_use": "Water: a PlaneMesh (subdivide_width/depth about 10 per metre for vertex ripples, works flat too) with material_override = load(\"res://starter/mat-liquid-glass/water_lake.tres\") (also water_ocean, water_pool, water_river). Water is opaque (no refraction); put it 0.2-0.5 m below the shore so banks hide the edges. water_river.tres has shore foam: set shader parameter channel_origin (world XZ of the channel centre line), channel_side (unit vector across the river) and channel_half_width (metres); flow_direction sets the current. Small basins/wells: water_fountain.tres on a flat disc (CylinderMesh height 0.02). Glass: glass_clear / glass_tinted / glass_frosted .tres on thin BoxMesh or QuadMesh panes (alpha transparency, double sided). Ice: ice_triplanar.tres. Lava: lava_flow.tres on a flat PlaneMesh for animated molten pools (world XZ mapping, tile_metres 3); lava_rock_triplanar.tres for glowing cracked rock banks; lava_molten.tres for static molten surfaces. Lava emission glows with the WorldEnvironment glow enabled; add an orange OmniLight3D (range 6, energy 2) over lava pools for light on surroundings.",
+ "entry": [
+  "res://starter/mat-liquid-glass/water_lake.tres",
+  "res://starter/mat-liquid-glass/water_ocean.tres",
+  "res://starter/mat-liquid-glass/water_pool.tres",
+  "res://starter/mat-liquid-glass/water_river.tres",
+  "res://starter/mat-liquid-glass/water_fountain.tres",
+  "res://starter/mat-liquid-glass/glass_clear.tres",
+  "res://starter/mat-liquid-glass/glass_tinted.tres",
+  "res://starter/mat-liquid-glass/glass_frosted.tres",
+  "res://starter/mat-liquid-glass/ice_triplanar.tres",
+  "res://starter/mat-liquid-glass/lava_flow.tres",
+  "res://starter/mat-liquid-glass/lava_rock_triplanar.tres"
+ ],
+ "contents": [
+  {
+   "path": "ice_triplanar.tres",
+   "what": "cracked blue-green glacier ice; world-triplanar, one repeat = 1.5 m, no UVs needed"
+  },
+  {
+   "path": "ice.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 1.5 m)"
+  },
+  {
+   "path": "lava_rock_triplanar.tres",
+   "what": "dark cooled lava crust with glowing orange cracks; world-triplanar, one repeat = 2 m, no UVs needed"
+  },
+  {
+   "path": "lava_rock.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 2 m)"
+  },
+  {
+   "path": "lava_molten_triplanar.tres",
+   "what": "bright molten orange lava surface; world-triplanar, one repeat = 3 m, no UVs needed"
+  },
+  {
+   "path": "lava_molten.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 3 m)"
+  },
+  {
+   "path": "water.gdshader",
+   "what": "opaque animated water; uniforms deep/shallow/foam colours, wave_height, wave_scale, flow_direction, flow_speed, foam_amount, river_banks + channel_*, eddy_point/strength, detail_ripples, sky_tint, fresnel_strength"
+  },
+  {
+   "path": "water_lake.tres",
+   "what": "calm dark green-blue lake"
+  },
+  {
+   "path": "water_river.tres",
+   "what": "flowing river with shore foam (channel along world Z through x=0, half width 2.25 m)"
+  },
+  {
+   "path": "water_ocean.tres",
+   "what": "deep blue sea with 4x larger swells"
+  },
+  {
+   "path": "water_pool.tres",
+   "what": "bright turquoise swimming pool"
+  },
+  {
+   "path": "water_ripple.gdshader",
+   "what": "still basin water with rings from the object centre"
+  },
+  {
+   "path": "water_fountain.tres",
+   "what": "fountain / well water preset"
+  },
+  {
+   "path": "glass_clear.tres",
+   "what": "clear window glass (alpha 0.12)"
+  },
+  {
+   "path": "glass_tinted.tres",
+   "what": "green bottle glass"
+  },
+  {
+   "path": "glass_frosted.tres",
+   "what": "milky frosted glass"
+  },
+  {
+   "path": "lava_flow.gdshader",
+   "what": "two-layer scrolling molten lava with pulsing emission (world XZ)"
+  },
+  {
+   "path": "lava_flow.tres",
+   "what": "animated molten lava pool preset"
+  },
+  {
+   "path": "textures/",
+   "what": "1024 px JPG maps: *_albedo (sRGB), *_normal (OpenGL +Y), *_rough, optional *_metal / *_emission"
+  }
+ ],
+ "deps": [],
+ "scale": "metres; world-triplanar materials tile at the stated physical repeat size",
+ "license": "summer",
+ "credit": "",
+ "license_detail": "Shaders are original Summer work (water/ripple generalised from lantern-hollow layout/water.gdshader and fountain.gdshader: authored in repo); ice/lava textures are ambientCG CC0 (Ice003, Lava001, Lava004). No attribution required.",
+ "provenance": "water.gdshader generalised from lantern-hollow layout/water.gdshader (eddy point, colours, waves and fresnel now uniforms); water_ripple from layout/fountain.gdshader; lava_flow.gdshader and glass presets written for this pack; ambientCG CC0 1K-JPG maps for ice and lava (Ice003 identified in template-3d-shooter-arena, canonical copy downloaded).",
+ "source": "ambientcg.com 1K-JPG archives (URL + sha256 per material in source_detail); shaders from lantern-hollow@66b75b8:game/layout/water.gdshader, fountain.gdshader",
+ "source_detail": [
+  {
+   "asset": "Ice003",
+   "page": "https://ambientcg.com/a/Ice003",
+   "download": "https://ambientcg.com/get?file=Ice003_1K-JPG.zip",
+   "archive_sha256": "df5279cdfd8b2f9adac595086bc5a17a96492647eabd9459d2ccb77358f86325",
+   "license": "CC0-1.0",
+   "material": "ice"
+  },
+  {
+   "asset": "Lava001",
+   "page": "https://ambientcg.com/a/Lava001",
+   "download": "https://ambientcg.com/get?file=Lava001_1K-JPG.zip",
+   "archive_sha256": "c3b734e9f98d96d095bfbe9e918248b8d806de64e90b30eea6f0636349d538ef",
+   "license": "CC0-1.0",
+   "material": "lava_rock"
+  },
+  {
+   "asset": "Lava004",
+   "page": "https://ambientcg.com/a/Lava004",
+   "download": "https://ambientcg.com/get?file=Lava004_1K-JPG.zip",
+   "archive_sha256": "fee9256befd26b59a7ff452ab6379dab4cdace5d7bee7f78cd9ad8176dd67c28",
+   "license": "CC0-1.0",
+   "material": "lava_molten"
+  }
+ ],
+ "verified": {
+  "compatibility": true,
+  "forward_plus": true,
+  "notes": "tools/shoot.sh rendered demo.tscn in Compatibility and Forward+ with no SCRIPT/Parse/shader errors in either log; Compatibility images inspected; tools/fresh_test.sh imported and rendered cleanly in a fresh cloud project. Water is opaque (no refraction/depth fade); glass is alpha-blended without refraction; lava glow verified with stage glow. Previews/shots use work/u03-materials/project/tools/mat_stage.tscn (preview_stage with AgX tonemap, exposure 0.75, sky ambient 0.6, darker floor) because the shared preview_stage's sky ambient + sky specular washes textured materials out in Compatibility (Forward+ is fine); fresh_test renders with preview_stage look washed for that reason only. v1.1 (2026-10-03, owner rule: building blocks only): demo scene and demo scripts moved out; the remaining pieces are unchanged."
+ },
+ "wow": 3,
+ "bytes": 3210562
+}

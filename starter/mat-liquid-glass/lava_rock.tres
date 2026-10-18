@@ -1,0 +1,20 @@
+[gd_resource type="StandardMaterial3D" load_steps=5 format=3]
+
+[ext_resource type="Texture2D" path="res://starter/mat-liquid-glass/textures/lava_rock_albedo.jpg" id="1"]
+[ext_resource type="Texture2D" path="res://starter/mat-liquid-glass/textures/lava_rock_rough.jpg" id="2"]
+[ext_resource type="Texture2D" path="res://starter/mat-liquid-glass/textures/lava_rock_emission.jpg" id="3"]
+[ext_resource type="Texture2D" path="res://starter/mat-liquid-glass/textures/lava_rock_normal.jpg" id="4"]
+
+[resource]
+resource_name = "lava_rock"
+albedo_texture = ExtResource("1")
+roughness = 1.0
+roughness_texture = ExtResource("2")
+emission_enabled = true
+emission = Color(1, 1, 1, 1)
+emission_operator = 1
+emission_energy_multiplier = 3.0
+emission_texture = ExtResource("3")
+normal_enabled = true
+normal_scale = 1.0
+normal_texture = ExtResource("4")

@@ -1,0 +1,13 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://starter/mat-liquid-glass/water.gdshader" id="1"]
+
+[resource]
+resource_name = "water_lake"
+shader = ExtResource("1")
+shader_parameter/deep_color = Color(0.03, 0.12, 0.15, 1)
+shader_parameter/shallow_color = Color(0.08, 0.25, 0.24, 1)
+shader_parameter/wave_height = 1.0
+shader_parameter/wave_scale = 1.0
+shader_parameter/flow_speed = 0.15
+shader_parameter/foam_amount = 0.15
