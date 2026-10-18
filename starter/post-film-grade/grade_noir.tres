@@ -1,0 +1,14 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://starter/post-film-grade/film_grade.gdshader" id="1_sh"]
+
+[resource]
+render_priority = -128
+shader = ExtResource("1_sh")
+shader_parameter/temperature = 0.0
+shader_parameter/contrast = 1.35
+shader_parameter/saturation = 0.0
+shader_parameter/split_amount = 0.0
+shader_parameter/vignette = 0.55
+shader_parameter/grain = 0.06
+shader_parameter/chromatic = 0.0

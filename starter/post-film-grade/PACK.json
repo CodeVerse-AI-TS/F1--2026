@@ -1,0 +1,53 @@
+{
+  "id": "post-film-grade",
+  "title": "Film grade post-FX: vignette, grain, warm/cool split tone, chromatic edge",
+  "kind": "post_fx",
+  "genres": [
+    "any",
+    "cinematic",
+    "horror",
+    "drama",
+    "adventure"
+  ],
+  "summary": "Full-screen cinematic grade usable on top of any look: contrast, saturation, warm/cool temperature, teal-shadow/amber-highlight split tone, vignette, animated film grain and a slight RGB fringe at the screen edges. Three presets: warm, cool, noir (black and white).",
+  "use_when": "The prompt asks for cinematic, filmic, gritty, vintage, horror, noir or 'movie-like' visuals, or a first shot needs extra polish.",
+  "how_to_use": "Instance res://starter/post-film-grade/film_grade.tscn as a child of the main 3D scene. It is a MeshInstance3D full-screen quad (any position, never culled); instance it anywhere in the 3D scene. It draws first in the transparent pass (render_priority -128), so particles and glass drawn after it are not affected. Use only ONE full-screen colour pass (post-film-grade, post-retro, or the grade inside look-cel-anime); post-cel-ink and post-bloom-punch stack with it. UI (CanvasLayer) is not affected. Swap the quad mesh material for grade_cool.tres (night/horror) or grade_noir.tres (black and white). Tune shader_parameter temperature (-1 cool .. 1 warm), vignette (0..1), grain (0..0.3), chromatic (0..0.02), strength (0 = off).",
+  "entry": [
+    "res://starter/post-film-grade/film_grade.tscn"
+  ],
+  "contents": [
+    {
+      "path": "film_grade.tscn",
+      "what": "FilmGrade full-screen quad (warm preset)"
+    },
+    {
+      "path": "film_grade.gdshader",
+      "what": "grade shader"
+    },
+    {
+      "path": "grade_warm.tres",
+      "what": "warm preset (default)"
+    },
+    {
+      "path": "grade_cool.tres",
+      "what": "cool blue preset"
+    },
+    {
+      "path": "grade_noir.tres",
+      "what": "black-and-white high-contrast preset"
+    }
+  ],
+  "deps": [],
+  "scale": "screen-space; no geometry",
+  "license": "summer",
+  "credit": "",
+  "provenance": "Made by Summer for the shelf",
+  "source": "new (colour-space helpers from sakura-rally post_grade)",
+  "verified": {
+    "compatibility": true,
+    "forward_plus": true,
+    "notes": "demo.tscn rendered in Compatibility and Forward+ on macOS (Metal, 1280x720) with no SCRIPT ERROR or shader errors; fresh_test (clean cloud project + preview stage) imports and renders in Compatibility with no errors. Not run in a real browser (WebGL2) or on the cloud's Linux/Mesa GL. Grade, vignette, grain and chromatic edge visible in both renderers. demo.tscn has demo-only lighting nodes (DemoOnlyEnvironment, DemoOnlySun); do not copy those. v1.1 (2026-10-03, owner rule: building blocks only): demo scene and demo scripts moved out; the remaining pieces are unchanged."
+  },
+  "wow": 3,
+  "bytes": 24543
+}
