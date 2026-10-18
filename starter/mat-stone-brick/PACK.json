@@ -1,0 +1,232 @@
+{
+ "id": "mat-stone-brick",
+ "title": "Stone and brick materials: rock, cobblestone, bricks, stone blocks, roofs, plaster",
+ "kind": "material",
+ "genres": [
+  "medieval",
+  "fantasy",
+  "village",
+  "city",
+  "castle",
+  "dungeon",
+  "any-3d"
+ ],
+ "summary": "11 tiling 1K PBR masonry materials: rock, cobblestone, brick_red, brick_old, stone_blocks, stone_wall_mossy, roof_slate, roof_terracotta, plaster, limestone, slate; triplanar + UV versions.",
+ "use_when": "Buildings, castles, dungeons, walls, streets, roofs, cliffs or ruins should look like real masonry instead of grey boxes.",
+ "how_to_use": "Assign with mesh_instance.material_override = load(\"res://starter/mat-stone-brick/<name>_triplanar.tres\") (or CSGShape3D.material = ...). _triplanar files map in world space at real-world scale with no UVs: use them for level geometry, CSG, BoxMesh/PlaneMesh floors and walls, terrain chunks; pieces placed side by side tile seamlessly. Do not use _triplanar on moving or animated objects (the texture slides); use <name>.tres there and set uv1_scale to mesh size in metres divided by the repeat size. To tint, duplicate the material and set albedo_color. Roofs: use roof_slate.tres / roof_terracotta.tres (UV versions) on a PrismMesh; at uv1_scale (1,1,1) a 1.6 x 1.0 x 1.4 m prism shows correctly sized tiles running down the slope (scale uv1_scale up for bigger roofs). Brick and stone_wall rows run horizontally on vertical faces. For a real-geometry 3D cobble street use the mat-cobble-paving pack instead of the flat cobblestone texture.",
+ "entry": [
+  "res://starter/mat-stone-brick/cobblestone_triplanar.tres",
+  "res://starter/mat-stone-brick/brick_red_triplanar.tres",
+  "res://starter/mat-stone-brick/brick_old_triplanar.tres",
+  "res://starter/mat-stone-brick/stone_blocks_triplanar.tres",
+  "res://starter/mat-stone-brick/stone_wall_mossy_triplanar.tres",
+  "res://starter/mat-stone-brick/rock_triplanar.tres",
+  "res://starter/mat-stone-brick/plaster_triplanar.tres",
+  "res://starter/mat-stone-brick/roof_slate.tres",
+  "res://starter/mat-stone-brick/roof_terracotta.tres"
+ ],
+ "contents": [
+  {
+   "path": "rock_triplanar.tres",
+   "what": "grey layered cliff rock; world-triplanar, one repeat = 3 m, no UVs needed"
+  },
+  {
+   "path": "rock.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 3 m)"
+  },
+  {
+   "path": "cobblestone_triplanar.tres",
+   "what": "grey cobblestone paving with mossy joints; world-triplanar, one repeat = 1.15 m, no UVs needed"
+  },
+  {
+   "path": "cobblestone.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 1.15 m)"
+  },
+  {
+   "path": "brick_red_triplanar.tres",
+   "what": "clean red brick wall, light mortar; world-triplanar, one repeat = 2.4 x 1.2 m, no UVs needed"
+  },
+  {
+   "path": "brick_red.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 2.4 x 1.2 m)"
+  },
+  {
+   "path": "brick_old_triplanar.tres",
+   "what": "weathered mixed red/brown old brick, crumbling mortar; world-triplanar, one repeat = 2.4 x 1.2 m, no UVs needed"
+  },
+  {
+   "path": "brick_old.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 2.4 x 1.2 m)"
+  },
+  {
+   "path": "stone_blocks_triplanar.tres",
+   "what": "large light-grey cut stone blocks (castle / dungeon wall); world-triplanar, one repeat = 2.4 m, no UVs needed"
+  },
+  {
+   "path": "stone_blocks.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 2.4 m)"
+  },
+  {
+   "path": "stone_wall_mossy_triplanar.tres",
+   "what": "irregular rubble stone wall with green moss; world-triplanar, one repeat = 2.2 x 1.1 m, no UVs needed"
+  },
+  {
+   "path": "stone_wall_mossy.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 2.2 x 1.1 m)"
+  },
+  {
+   "path": "roof_slate_triplanar.tres",
+   "what": "dark charcoal slate roof tiles; world-triplanar, one repeat = 2.9 m, no UVs needed"
+  },
+  {
+   "path": "roof_slate.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 2.9 m)"
+  },
+  {
+   "path": "roof_terracotta_triplanar.tres",
+   "what": "orange terracotta clay roof tiles; world-triplanar, one repeat = 2.9 m, no UVs needed"
+  },
+  {
+   "path": "roof_terracotta.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 2.9 m)"
+  },
+  {
+   "path": "plaster_triplanar.tres",
+   "what": "off-white rough plaster / stucco wall; world-triplanar, one repeat = 2 m, no UVs needed"
+  },
+  {
+   "path": "plaster.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 2 m)"
+  },
+  {
+   "path": "limestone_triplanar.tres",
+   "what": "warm grey limestone surface (no joints); world-triplanar, one repeat = 1.5 m, no UVs needed"
+  },
+  {
+   "path": "limestone.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 1.5 m)"
+  },
+  {
+   "path": "slate_triplanar.tres",
+   "what": "blue-charcoal slate stone surface (no tile grid); world-triplanar, one repeat = 1.2 m, no UVs needed"
+  },
+  {
+   "path": "slate.tres",
+   "what": "same maps on UV1 (uv1_scale 1 = one repeat per UV unit; set uv1_scale = mesh metres / 1.2 m)"
+  },
+  {
+   "path": "textures/",
+   "what": "1024 px JPG maps: *_albedo (sRGB), *_normal (OpenGL +Y), *_rough, optional *_metal / *_emission"
+  }
+ ],
+ "deps": [],
+ "scale": "metres; world-triplanar materials tile at the stated physical repeat size",
+ "license": "summer",
+ "credit": "",
+ "license_detail": "Mixed: 9 materials are ambientCG CC0; limestone and slate are original Summer procedural textures (lantern-hollow docs/surface-assets.md: original procedural, art/overnight_surfaces/make_surfaces.py). No attribution required.",
+ "provenance": "ambientCG CC0 1K-JPG maps re-encoded (albedo x AO 50-60 %); plaster = ambientCG Plaster001 copied from lantern-hollow (2K downscaled); limestone/slate = Summer procedural (lantern-hollow overnight_surfaces).",
+ "source": "ambientcg.com 1K-JPG archives (URL + sha256 per material in source_detail); lantern-hollow@66b75b8 for copied sets",
+ "source_detail": [
+  {
+   "asset": "Rock030",
+   "page": "https://ambientcg.com/a/Rock030",
+   "download": "https://ambientcg.com/get?file=Rock030_1K-JPG.zip",
+   "archive_sha256": "2fd0bc2d214e2487c19062ed0798a85dd135b41cfc12bbaed42d5acae238f989",
+   "license": "CC0-1.0",
+   "albedo_note": "albedo multiplied by ambient occlusion at 50%",
+   "material": "rock"
+  },
+  {
+   "asset": "PavingStones070",
+   "page": "https://ambientcg.com/a/PavingStones070",
+   "download": "https://ambientcg.com/get?file=PavingStones070_1K-JPG.zip",
+   "archive_sha256": "84be05ad935c2a8ea0dd3b82dd18c9e1faf7eeae222b85d96beb14ed16276132",
+   "license": "CC0-1.0",
+   "albedo_note": "albedo multiplied by ambient occlusion at 60%",
+   "material": "cobblestone"
+  },
+  {
+   "asset": "Bricks085",
+   "page": "https://ambientcg.com/a/Bricks085",
+   "download": "https://ambientcg.com/get?file=Bricks085_1K-JPG.zip",
+   "archive_sha256": "93202c41a65e6932e77c7c42519ee5433b90150427ae726042c616c188e570a0",
+   "license": "CC0-1.0",
+   "albedo_note": "albedo multiplied by ambient occlusion at 50%",
+   "material": "brick_red"
+  },
+  {
+   "asset": "Bricks097",
+   "page": "https://ambientcg.com/a/Bricks097",
+   "download": "https://ambientcg.com/get?file=Bricks097_1K-JPG.zip",
+   "archive_sha256": "97b5df360161e48bcfed609aef361e8115b680ddc0aea4ad9321d4b00e222ad0",
+   "license": "CC0-1.0",
+   "albedo_note": "albedo multiplied by ambient occlusion at 50%",
+   "material": "brick_old"
+  },
+  {
+   "asset": "Bricks066",
+   "page": "https://ambientcg.com/a/Bricks066",
+   "download": "https://ambientcg.com/get?file=Bricks066_1K-JPG.zip",
+   "archive_sha256": "88d35b7a9cd0e2085918e68a31e79a0a71420749bf1bde07a7ede001f6572cdb",
+   "license": "CC0-1.0",
+   "albedo_note": "albedo multiplied by ambient occlusion at 50%",
+   "material": "stone_blocks"
+  },
+  {
+   "asset": "Bricks089",
+   "page": "https://ambientcg.com/a/Bricks089",
+   "download": "https://ambientcg.com/get?file=Bricks089_1K-JPG.zip",
+   "archive_sha256": "54b2d7bfcd51f36b638a86738b23cb65db7c44304bc1eec23dbbb2989088fd87",
+   "license": "CC0-1.0",
+   "albedo_note": "albedo multiplied by ambient occlusion at 60%",
+   "material": "stone_wall_mossy"
+  },
+  {
+   "asset": "RoofingTiles013A",
+   "page": "https://ambientcg.com/a/RoofingTiles013A",
+   "download": "https://ambientcg.com/get?file=RoofingTiles013A_1K-JPG.zip",
+   "archive_sha256": "d2718f7b70f61b14ce68a8682f26ee9386223a530687d09428c6025fc4925101",
+   "license": "CC0-1.0",
+   "albedo_note": "albedo multiplied by ambient occlusion at 60%",
+   "material": "roof_slate"
+  },
+  {
+   "asset": "RoofingTiles014A",
+   "page": "https://ambientcg.com/a/RoofingTiles014A",
+   "download": "https://ambientcg.com/get?file=RoofingTiles014A_1K-JPG.zip",
+   "archive_sha256": "b928f75b476df36417e01b6ab60057cb94f65abd035d7a1eaf7ea884ee0f1521",
+   "license": "CC0-1.0",
+   "albedo_note": "albedo multiplied by ambient occlusion at 60%",
+   "material": "roof_terracotta"
+  },
+  {
+   "asset": "Plaster001",
+   "page": "https://ambientcg.com/a/Plaster001",
+   "license": "CC0-1.0",
+   "copied_from": "lantern-hollow@66b75b8:game/assets/realism_materials/Plaster001/Plaster001_2K-JPG_*  (2K, downscaled to 1K)",
+   "color_sha256": "8cac8b7439bdd8d4695c64302c8f1f57af5ecff57c4754d0f04601bd0eb80ce5",
+   "material": "plaster"
+  },
+  {
+   "asset": "limestone",
+   "license": "summer",
+   "copied_from": "lantern-hollow@66b75b8:game/assets/overnight_surfaces/limestone_*",
+   "evidence": "docs/surface-assets.md: original procedural (art/overnight_surfaces/make_surfaces.py)",
+   "material": "limestone"
+  },
+  {
+   "asset": "slate",
+   "license": "summer",
+   "copied_from": "lantern-hollow@66b75b8:game/assets/overnight_surfaces/slate_*",
+   "evidence": "docs/surface-assets.md: original procedural (art/overnight_surfaces/make_surfaces.py)",
+   "material": "slate"
+  }
+ ],
+ "verified": {
+  "compatibility": true,
+  "forward_plus": true,
+  "notes": "tools/shoot.sh rendered demo.tscn in Compatibility and Forward+ with no SCRIPT/Parse/shader errors in either log; Compatibility images inspected; tools/fresh_test.sh imported and rendered cleanly in a fresh cloud project. Roof UV variants checked on a PrismMesh. Previews/shots use work/u03-materials/project/tools/mat_stage.tscn (preview_stage with AgX tonemap, exposure 0.75, sky ambient 0.6, darker floor) because the shared preview_stage's sky ambient + sky specular washes textured materials out in Compatibility (Forward+ is fine); fresh_test renders with preview_stage look washed for that reason only. v1.1 (2026-10-03, owner rule: building blocks only): demo scene and demo scripts moved out; the remaining pieces are unchanged."
+ },
+ "wow": 4,
+ "bytes": 7978661
+}
