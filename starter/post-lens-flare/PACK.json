@@ -1,0 +1,50 @@
+{
+  "id": "post-lens-flare",
+  "title": "Lens flare + sun glare: starburst, anamorphic streak, halo, hexagon ghosts",
+  "kind": "post_fx",
+  "genres": [
+    "any",
+    "racing",
+    "flight",
+    "shooter",
+    "adventure",
+    "space"
+  ],
+  "summary": "Full-screen additive procedural lens flare that follows the sun: white-hot core and warm glare, 6-blade starburst with fine streaks, blue anamorphic streak, rainbow halo ring and a chain of 8 hexagonal/round chromatic ghosts mirrored through the screen centre. Dims smoothly when trees, walls or the screen edge cover the sun (9 depth-buffer taps). No textures, Compatibility-safe.",
+  "use_when": "The camera looks toward a visible sun (sunset drive, flight, beach, desert, space with a star light) or the prompt asks for lens flare, sun glare, cinematic/JJ-Abrams/anamorphic look, 'shot on a camera'.",
+  "how_to_use": "Instance res://starter/post-lens-flare/lens_flare.tscn once anywhere in the 3D scene (MeshInstance3D full-screen quad + lens_flare.gd). It follows the brightest visible DirectionalLight3D (or its `sun` export) and only shows while the sun is in front of the camera and not covered. The sky must be the Environment background, not a sky-dome mesh; transparent objects do not occlude it. Tune: $LensFlare.set_param('intensity', 0.6) (0-3), 'glare', 'starburst', 'streak', 'ghosts', 'halo' (each 0-3, defaults 1/1/0.8/1/0.6), 'size' (0.3-3), 'flare_color', 'streak_color', 'occlusion_radius' (0-0.1 screen heights). strength = 0..1 fades it, 0 hides it. For a subtle realistic flare use intensity 0.5 and halo 0.3. Stacking: 3D passes draw in the transparent pass in render_priority order: post-film-grade / post-retro colour pass (-128, the ONE 3D colour pass), post-cel-ink (-127), post-god-rays (120, additive), post-lens-flare (125, additive). Additive passes never replace the picture, so they stack with any of them. Then the canvas passes (each copies the screen first, so each sees the previous one): look-* screen grades (z 4000), post-heat-haze (z 4001), post-tilt-shift (z 4002), post-lut-grade (z 4003, keep it last). post-2d-glow (z 4096, no own copy) overwrites earlier canvas passes; do not combine it with these.",
+  "entry": [
+    "res://starter/post-lens-flare/lens_flare.tscn"
+  ],
+  "contents": [
+    {
+      "path": "lens_flare.tscn",
+      "what": "LensFlare full-screen quad (MeshInstance3D + lens_flare.gd)"
+    },
+    {
+      "path": "lens_flare.gd",
+      "what": "follows the sun light, strength fade, set_param()"
+    },
+    {
+      "path": "lens_flare.gdshader",
+      "what": "procedural glare/starburst/streak/halo/ghosts with depth occlusion (spatial, additive)"
+    },
+    {
+      "path": "lens_flare.tres",
+      "what": "default material (render_priority 125)"
+    }
+  ],
+  "deps": [],
+  "scale": "screen-space; no geometry",
+  "license": "summer",
+  "credit": "",
+  "provenance": "Made by Summer for the shelf (unit s03-post-light); no third-party code or art",
+  "source": "new",
+  "verified": {
+    "compatibility": true,
+    "forward_plus": true,
+    "notes": "Rendered demo.tscn in Compatibility and Forward+ on macOS (Summer 4.7.2, OpenGL 4.1 on Metal for Compatibility, Metal 4.0 for Forward+, 1280x720) with no SCRIPT ERROR or shader errors; fresh_test (clean cloud project + preview stage) imports and renders in Compatibility with no errors. Before/after evidence on a Poly Haven CC0 showcase (never shipped): work/s03-post-light/compare/post-lens-flare.jpg. Not run in a real browser (WebGL2) or on the cloud's Linux/Mesa GL. demo.tscn has demo-only nodes (DemoOnlyEnvironment, DemoOnlySun); do not copy those. Occlusion uses 9 depth taps per pixel in the fragment stage (the Compatibility renderer cannot read the depth buffer in vertex()). No point-light or emissive-object flares, sun only. v1.1 (2026-10-03, owner rule: building blocks only): demo scene and demo scripts moved out; the remaining pieces are unchanged."
+  },
+  "wow": 4,
+  "bytes": 34077
+}

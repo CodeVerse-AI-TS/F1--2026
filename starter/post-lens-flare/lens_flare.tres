@@ -1,0 +1,18 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://starter/post-lens-flare/lens_flare.gdshader" id="1_sh"]
+
+[resource]
+render_priority = 125
+shader = ExtResource("1_sh")
+shader_parameter/flare_color = Color(1, 0.86, 0.66, 1)
+shader_parameter/intensity = 1.0
+shader_parameter/glare = 1.0
+shader_parameter/starburst = 1.0
+shader_parameter/streak = 0.8
+shader_parameter/streak_color = Color(0.45, 0.65, 1, 1)
+shader_parameter/ghosts = 1.0
+shader_parameter/halo = 0.6
+shader_parameter/size = 1.0
+shader_parameter/occlusion_radius = 0.018
+shader_parameter/strength = 1.0

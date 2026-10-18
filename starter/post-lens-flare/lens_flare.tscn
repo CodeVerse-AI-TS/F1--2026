@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://starter/post-lens-flare/lens_flare.gd" id="1_gd"]
+[ext_resource type="Material" path="res://starter/post-lens-flare/lens_flare.tres" id="2_mat"]
+
+[sub_resource type="QuadMesh" id="quad"]
+size = Vector2(2, 2)
+
+[node name="LensFlare" type="MeshInstance3D"]
+cast_shadow = 0
+extra_cull_margin = 16384.0
+custom_aabb = AABB(-100000, -100000, -100000, 200000, 200000, 200000)
+mesh = SubResource("quad")
+material_override = ExtResource("2_mat")
+script = ExtResource("1_gd")
