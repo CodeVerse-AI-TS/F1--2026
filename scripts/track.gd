@@ -48,6 +48,10 @@ var HALF_W: float:
 var _body: StaticBody3D
 var _rng := RandomNumberGenerator.new()
 var _grass: Material
+## Map extents, filled in _build_world and used by the scenery builders.
+var _z_limit := 180.0
+var _map_center := Vector3.ZERO
+var _hi_z := 190.0
 
 func _ready() -> void:
 	data = GameState.track() if data.is_empty() else data
@@ -747,7 +751,7 @@ func _build_buildings() -> void:
 			var gap := _rng.randf_range(4.0, 9.0)
 			var c := pts[i] + r * (half_w + WALL_T + gap + d * 0.5)
 			c.y = 0
-			if c.z + maxf(w, d) * 0.5 > 182.0:
+			if c.z + maxf(w, d) * 0.5 > _z_limit:
 				continue
 			var cp := curve.get_closest_point(c - global_position)
 			var clear := Vector2(cp.x - c.x, cp.z - c.z).length()
