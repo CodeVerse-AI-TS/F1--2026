@@ -38,6 +38,12 @@ var pit_phase := 0          # 0 racing, 1 in the pit lane, 2 stopped in the box
 var _pit_timer := 0.0
 var pit_lane_lat := 0.0
 
+## Each driver holds a slightly different line so the field does not drive nose to tail.
+var line_bias := 0.0
+## True while the flap is open in a DRS zone with a clear road ahead.
+var drs_open := false
+@export var drs_top_bonus := 6.0        # extra m/s on a straight with the flap open
+
 func _ready() -> void:
 	add_to_group("ai_car")
 	var cs := CollisionShape3D.new()
@@ -67,6 +73,8 @@ func setup(p_track: Node3D, p_team: Dictionary, p_driver: String, start_distance
 	pit_phase = 0
 	_pit_timer = 0.0
 	pit_lane_lat = -(float(track.HALF_W) + 4.8)
+	line_bias = randf_range(-1.0, 1.0) * (float(track.HALF_W) - 3.0) * 0.45
+	drs_open = false
 	model.set_livery(p_team)
 	_place(0.0, 0.0)
 	reset_physics_interpolation()
@@ -83,12 +91,20 @@ func drive(delta: float, others: Array) -> void:
 	if vt >= 83.0:
 		vt = straight_speed
 	vt *= skill
-	# random mistakes: lock-up / run wide, more often for weaker drivers
+	# random mistakes: lock-up / run wide, more often for weaker drivers and worn tyres
 	_mistake_t -= delta
-	if _mistake_t <= 0.0 and randf() < mistake_chance * (1.0 - skill) * 10.0 * delta:
+	var error_rate := mistake_chance * (1.0 - skill) * 10.0 * (1.0 + 1.5 * wear)
+	if _mistake_t <= 0.0 and randf() < error_rate * delta:
 		_mistake_t = randf_range(0.6, 1.4)
 	if _mistake_t > 0.0:
 		vt *= 0.72
+	# DRS: open the flap in a zone when there is no car close enough ahead to have to defend
+	drs_open = false
+	for z in track.drs_zones:
+		if _in_zone(off, z) and _gap_to_car_ahead(others) > 12.0:
+			drs_open = true
+	if drs_open:
+		vt += drs_top_bonus
 	# traffic: follow, overtake, defend
 	var blocked := false
 	for o in others:
@@ -99,7 +115,10 @@ func drive(delta: float, others: Array) -> void:
 		if gap > 0.0 and gap < follow_distance and absf(dl) < 2.4:
 			blocked = true
 			if float(o["speed"]) < speed + 1.0:
-				var side := -1.0 if float(o["lat"]) > 0.0 else 1.0
+				# pull out on whichever side of the car ahead has more room
+				var room_right := (half_w - 1.8) - float(o["lat"])
+				var room_left := (half_w - 1.8) + float(o["lat"])
+				var side := 1.0 if room_right > room_left else -1.0
 				target_lateral = side * (half_w - 2.2)
 			if gap < 9.0:
 				vt = minf(vt, float(o["speed"]) - 0.5)
@@ -110,7 +129,7 @@ func drive(delta: float, others: Array) -> void:
 	else:
 		_clear_t += delta
 		if _clear_t > 2.5:
-			target_lateral = move_toward(target_lateral, 0.0, delta)  # back to the racing line
+			target_lateral = move_toward(target_lateral, line_bias, delta)  # back to this driver's line
 	# tyre wear grows in the corners, and the pace drops as the rubber goes off
 	var corner := 1.0 - clampf(track.speed_at(off + lookahead) / 75.0, 0.0, 1.0)
 	wear = clampf(wear + delta * (0.00045 + 0.0016 * corner), 0.0, 1.0)
@@ -132,7 +151,7 @@ func drive(delta: float, others: Array) -> void:
 		if _pit_timer <= 0.0:
 			pit_phase = 0
 			wear = 0.0
-			target_lateral = 0.0
+			target_lateral = line_bias
 	else:
 		target_lateral = clampf(target_lateral, -(half_w - 1.6), half_w - 1.6)
 	_braking = 1.0 if vt < speed - 2.0 else 0.0
@@ -142,6 +161,23 @@ func drive(delta: float, others: Array) -> void:
 	lateral = move_toward(lateral, target_lateral, lateral_speed * delta)
 	_place(delta, (lateral - prev) / maxf(delta, 0.001))
 
+## True when the offset sits inside a DRS zone (start may sit after the line).
+func _in_zone(off: float, z: Dictionary) -> bool:
+	var s: float = float(z["start"])
+	var e: float = float(z["end"])
+	return off >= s and off <= e if s <= e else (off >= s or off <= e)
+
+## Metres to the nearest car ahead on the road (INF when the road ahead is clear).
+func _gap_to_car_ahead(others: Array) -> float:
+	var best := INF
+	for o in others:
+		if o["node"] == self:
+			continue
+		var gap: float = float(o["d"]) - distance
+		if gap > 0.0:
+			best = minf(best, gap)
+	return best
+
 func _place(delta: float, lat_vel: float) -> void:
 	var xf: Transform3D = track.get_xform(fposmod(distance, track.length))
 	xf.origin += xf.basis.x * lateral
@@ -149,4 +185,5 @@ func _place(delta: float, lat_vel: float) -> void:
 	xf.basis = xf.basis * Basis(Vector3.UP, yaw)
 	global_transform = xf
 	if delta > 0.0:
+		model.set_drs(drs_open)
 		model.update_visual(delta, speed, clampf(yaw * 3.0, -1.0, 1.0), 0.0, _braking, 1.0 - _braking, false)
