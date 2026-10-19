@@ -81,6 +81,7 @@ func _ready() -> void:
 	bronze = track.ideal_time * 1.25
 	hud.set_targets(gold, silver, bronze)
 	hud.set_units(GameState.speed_unit())
+	hud.setup_minimap(track.data)
 	var team: Dictionary = GameState.team()
 	car.model.set_livery(team)
 	car.wall_hit.connect(_on_wall_hit)
@@ -305,6 +306,11 @@ func _physics_process(delta: float) -> void:
 	hud.set_boost(car.boost, car.boosting)
 	hud.set_drs(2 if car.drs_open else (1 if car.drs_available and car.drs_in_zone or car.drs_available else 0))
 	hud.set_tyres(car.tyres.wheels, car.tyres.short(), car.tyres.colour(), car.tyres.temp_state())
+	# minimap: one dot per car, the player highlighted
+	var dots: Array = [{"pos": car.global_position, "player": true}]
+	for ai in ais:
+		dots.append({"pos": ai.global_position, "player": false})
+	hud.set_minimap(dots)
 
 # ---------- pit lane and pit stops ----------
 
