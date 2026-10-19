@@ -9,6 +9,7 @@ const PauseMenu = preload("res://scripts/ui/pause_menu.gd")
 const GameState = preload("res://scripts/game_state.gd")
 const AICar = preload("res://scripts/ai_car.gd")
 const Tyres = preload("res://scripts/tyre_model.gd")
+const Leaderboard = preload("res://scripts/leaderboard.gd")
 
 @export var pit_entry_speed_limit := 100.0  # km/h: above this on pit entry = speeding penalty
 @export var pit_fast_stop := 2.4            # minimum crew time (seconds)
@@ -75,7 +76,8 @@ var _drs_was_in_zone := false
 func _ready() -> void:
 	GameState.ensure_init()
 	is_race = GameState.mode != GameState.Mode.TIME_TRIAL
-	total_laps = int(GameState.config["laps"]) if is_race else 0
+	# race length: fixed lap options, or a percentage distance scaled to this circuit
+	total_laps = GameState.resolve_laps(track.data, int(GameState.config.get("length", 0))) if is_race else 0
 	gold = track.ideal_time * 1.04
 	silver = track.ideal_time * 1.12
 	bronze = track.ideal_time * 1.25
@@ -581,6 +583,13 @@ func _finish_lap() -> void:
 		hud.set_best(t)
 		msg += "\nNEW BEST LAP"
 		col = hud.PURPLE if medal == "NO MEDAL" else col
+	if not is_race:
+		# time trial: every completed lap is a leaderboard entry for this circuit
+		var res := Leaderboard.submit(String(GameState.track()["id"]), "time_trial", t,
+			String(GameState.config.get("player_name", "DRIVER")), String(GameState.team()["name"]),
+			String(GameState.DIFFICULTIES[clampi(int(GameState.config["difficulty"]), 0, 2)]), 1)
+		if not res.is_empty() and int(res["rank"]) > 0:
+			msg += "\nLEADERBOARD  P%d" % int(res["rank"])
 	hud.toast(msg, col, 4.0)
 
 func _finish_race() -> void:
@@ -605,6 +614,13 @@ func _finish_race() -> void:
 			t = race_time + (total_laps * L - float(ai.distance)) / maxf(float(ai.speed), 40.0)
 		body += "P%-3d %-16s %s\n" % [i + 1, e["name"], hud.fmt(t)]
 	body += "\nYour best lap   %s\nPenalties        +%.1fs" % [hud.fmt(best_lap), penalties]
+	# the finishing time goes to the local board: championship rounds get their own tab
+	var mode_key := "championship" if GameState.mode == GameState.Mode.CHAMPIONSHIP else "race"
+	var saved := Leaderboard.submit(String(GameState.track()["id"]), mode_key, race_time,
+		String(GameState.config.get("player_name", "DRIVER")), String(GameState.team()["name"]),
+		String(GameState.DIFFICULTIES[clampi(int(GameState.config["difficulty"]), 0, 2)]), total_laps)
+	if not saved.is_empty() and int(saved["rank"]) > 0:
+		body += "\n%s board   P%d / 10" % ["CHAMPIONSHIP" if mode_key == "championship" else "RACE", int(saved["rank"])]
 	get_tree().paused = true
 	pause_menu.show_results("RACE COMPLETE", body)
 

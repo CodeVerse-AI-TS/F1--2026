@@ -16,6 +16,11 @@ const CAMERA_NAMES := ["CHASE", "FAR CHASE", "COCKPIT", "HOOD", "TV", "TOP DOWN"
 const QUALITY_NAMES := ["Low", "Medium", "High"]
 const DIFFICULTIES := ["Rookie", "Pro", "Legend"]
 const LAP_OPTIONS := [3, 5, 10]
+## Race length choices: fixed lap counts first, then percentage distances that are
+## converted into a lap count from the track length (see resolve_laps).
+const RACE_LENGTHS := ["3 laps", "5 laps", "10 laps", "25% distance", "50% distance", "100% distance"]
+## Target race duration in seconds for the three percentage options (short: 5-10 minutes).
+const RACE_TARGET_SECONDS := [360.0, 480.0, 720.0]
 const AI_OPTIONS := [0, 3, 5, 7, 9]
 ## Base AI pace (fraction of the ideal lap) per difficulty: Rookie, Pro, Legend.
 const AI_SKILL := [0.88, 0.94, 0.985]
@@ -124,7 +129,8 @@ const ACTIONS := ["accelerate", "brake", "steer_left", "steer_right", "boost", "
 
 static var mode: int = Mode.TIME_TRIAL
 static var state: int = State.MENU
-static var config := {"track": 0, "laps": 3, "difficulty": 1, "team": 0, "ai_count": 7}
+static var config := {"track": 0, "laps": 3, "length": 0, "difficulty": 1, "team": 0,
+	"ai_count": 7, "player_name": "DRIVER"}
 static var flashbacks := MAX_FLASHBACKS
 static var settings := {"master": 0.8, "music": 0.6, "sfx": 0.9, "quality": 2, "camera": 0, "units": 0}
 static var _initialized := false
@@ -244,6 +250,19 @@ static func track_corners(data: Dictionary) -> int:
 				in_corner = false
 		prev = dir
 	return corners
+
+## Lap count for the chosen race-length option. Fixed options return their lap count;
+## percentage options aim at a target race duration using the track's ideal pace,
+## so a short race stays roughly 5-10 minutes whatever the circuit length.
+static func resolve_laps(data: Dictionary, length_index: int) -> int:
+	var idx := clampi(length_index, 0, RACE_LENGTHS.size() - 1)
+	if idx <= 2:
+		return int(LAP_OPTIONS[idx])
+	# percentage options: average arcade pace turns the lap length into a lap time estimate
+	var metres := track_length(data)
+	var est_lap := clampf(metres / 52.0, 18.0, 190.0)
+	var target: float = float(RACE_TARGET_SECONDS[clampi(idx - 3, 0, RACE_TARGET_SECONDS.size() - 1)])
+	return clampi(int(round(target / est_lap)), 2, 99)
 
 ## Fastest recorded lap for a track (0 when nothing is recorded yet).
 ## Reads the same user://leaderboard.json the leaderboard screen writes.
