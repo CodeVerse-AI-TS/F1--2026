@@ -719,7 +719,9 @@ func _build_yachts() -> void:
 	for k in 16:
 		var y := Node3D.new()
 		add_child(y)
-		y.position = Vector3(_rng.randf_range(-520, 120), -1.0, _rng.randf_range(225, 420))
+		# moored beyond the quay, spread across the map width
+		y.position = Vector3(_map_center.x + _rng.randf_range(-520, 120), -1.0,
+			_z_limit + _rng.randf_range(35, 230))
 		y.rotation.y = _rng.randf_range(-0.3, 0.3) + (PI * 0.5 if k % 3 == 0 else 0.0)
 		var l := _rng.randf_range(16, 34)
 		_box(y, Vector3(l * 0.24, 1.8, l), Vector3(0, 0.6, 0), white)
