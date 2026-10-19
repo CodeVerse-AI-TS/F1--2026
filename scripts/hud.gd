@@ -8,6 +8,11 @@ const GREEN := Color(0.35, 1.0, 0.45)
 const PURPLE := Color(0.8, 0.45, 1.0)
 const RED := Color(1.0, 0.3, 0.25)
 
+const MinimapScript = preload("res://scripts/ui/minimap.gd")
+
+var _minimap: Control
+var _minimap_panel: Panel
+
 var _lap: Label
 var _best: Label
 var _splits: Array[Label] = []
@@ -173,6 +178,42 @@ func _build_race_widgets(root: Control) -> void:
 	_gap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_style(_gap, 16, Color(0.7, 0.85, 1.0))
 	root.add_child(_gap)
+
+	# minimap, under the targets panel on the right
+	_minimap_panel = Panel.new()
+	var msb := StyleBoxFlat.new()
+	msb.bg_color = Color(0.02, 0.02, 0.03, 0.5)
+	msb.border_color = Color(1.0, 0.8, 0.35, 0.7)
+	msb.border_width_left = 3
+	msb.set_corner_radius_all(6)
+	_minimap_panel.add_theme_stylebox_override("panel", msb)
+	_minimap_panel.anchor_left = 1.0
+	_minimap_panel.anchor_right = 1.0
+	_minimap_panel.offset_left = -294
+	_minimap_panel.offset_right = -24
+	_minimap_panel.offset_top = 166
+	_minimap_panel.offset_bottom = 356
+	_minimap_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_minimap_panel)
+	_minimap = MinimapScript.new()
+	_minimap.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_minimap.offset_left = 10
+	_minimap.offset_top = 24
+	_minimap.offset_right = -8
+	_minimap.offset_bottom = -8
+	_minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_minimap_panel.add_child(_minimap)
+	_label(_minimap_panel, "CIRCUIT", 12, Color(0.7, 0.7, 0.75), Vector2(12, 6))
+
+## Called once by the session with the track data so the outline can be projected.
+func setup_minimap(track_data: Dictionary) -> void:
+	if _minimap and _minimap.has_method("setup"):
+		_minimap.setup(track_data)
+
+## One entry per car: {"pos": Vector3, "player": bool}.
+func set_minimap(cars: Array) -> void:
+	if _minimap and _minimap.has_method("set_cars"):
+		_minimap.set_cars(cars)
 
 # ---------- tyres and pit ----------
 
