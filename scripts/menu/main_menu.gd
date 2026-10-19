@@ -8,6 +8,8 @@ const SettingsPanel = preload("res://scripts/ui/settings_panel.gd")
 var _content: CenterContainer
 var _swatch: ColorRect
 var _first_button: Button
+var _preview: TrackPreview
+var _info: Label
 
 func _ready() -> void:
 	GameState.ensure_init()
