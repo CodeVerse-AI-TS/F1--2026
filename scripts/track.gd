@@ -644,9 +644,9 @@ func _build_vegetation(kind: int) -> void:
 		for s in [-1.0, 1.0]:
 			if _rng.randf() < 0.35:
 				continue
-			var r := _right_at(i * seg) * s
+			var r: Vector3 = _right_at(i * seg) * s
 			var off := half_w + WALL_T + _rng.randf_range(9.0, 26.0)
-			var pos := pts[i] + r * off
+			var pos: Vector3 = pts[i] + r * off
 			var cp := curve.get_closest_point(pos - global_position)
 			if Vector2(cp.x - pos.x, cp.z - pos.z).length() < half_w + 8.0:
 				continue
@@ -694,8 +694,8 @@ func _build_floodlights() -> void:
 	head.emission_energy_multiplier = 3.5
 	for i in range(0, count, 26):
 		for s in [-1.0, 1.0]:
-			var r := _right_at(i * seg) * s
-			var base := pts[i] + r * (half_w + WALL_T + 4.0)
+			var r: Vector3 = _right_at(i * seg) * s
+			var base: Vector3 = pts[i] + r * (half_w + WALL_T + 4.0)
 			var mast := _box(self, Vector3(0.5, 22.0, 0.5), Vector3.ZERO, pole)
 			mast.global_position = base + Vector3(0, 11.0, 0)
 			var lamp := _box(self, Vector3(3.2, 0.5, 1.2), Vector3.ZERO, head)
