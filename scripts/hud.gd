@@ -98,7 +98,7 @@ func _ready() -> void:
 	root.add_child(_toast)
 
 	# controls hint
-	var hint := _label(root, "W/S throttle-brake   A/D steer   SPACE boost   E DRS   C camera   R checkpoint (hold: restart)   ESC pause", 14, Color(1, 1, 1, 0.55), Vector2(24, 0))
+	var hint := _label(root, "W/S throttle-brake   A/D steer   SPACE boost   E DRS   P pit  1-4 tyres   C camera   R checkpoint (hold: restart)   ESC pause", 14, Color(1, 1, 1, 0.55), Vector2(24, 0))
 	hint.anchor_top = 1.0
 	hint.anchor_bottom = 1.0
 	hint.offset_top = -40
@@ -115,6 +115,7 @@ func _ready() -> void:
 	_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_ring)
 	_build_race_widgets(root)
+	_build_tyre_panel(root)
 
 func _build_race_widgets(root: Control) -> void:
 	# DRS badge, left of the boost meter
@@ -173,6 +174,89 @@ func _build_race_widgets(root: Control) -> void:
 	_style(_gap, 16, Color(0.7, 0.85, 1.0))
 	root.add_child(_gap)
 
+# ---------- tyres and pit ----------
+
+var _tyre_panel: Panel
+var _tyre_fills: Array[ColorRect] = []
+var _tyre_texts: Array[Label] = []
+var _compound_lbl: Label
+var _tyre_temp_lbl: Label
+var _pit_lbl: Label
+var _pit_style: StyleBoxFlat
+
+## Four tyre wear bars (FL, FR, RL, RR as 0..1 wear) plus compound badge and temperature state.
+func _build_tyre_panel(root: Control) -> void:
+	_tyre_panel = Panel.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.02, 0.02, 0.03, 0.55)
+	sb.border_color = Color(1.0, 0.8, 0.35, 0.8)
+	sb.border_width_left = 3
+	sb.set_corner_radius_all(4)
+	_tyre_panel.add_theme_stylebox_override("panel", sb)
+	_tyre_panel.anchor_top = 1.0
+	_tyre_panel.anchor_bottom = 1.0
+	_tyre_panel.offset_left = 24
+	_tyre_panel.offset_right = 268
+	_tyre_panel.offset_top = -176
+	_tyre_panel.offset_bottom = -24
+	_tyre_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_tyre_panel)
+	_label(_tyre_panel, "TYRES", 13, Color(0.7, 0.7, 0.75), Vector2(14, 8))
+	_compound_lbl = _label(_tyre_panel, "M", 30, Color(0.98, 0.85, 0.2), Vector2(200, 4))
+	_tyre_temp_lbl = _label(_tyre_panel, "COLD", 12, Color(0.7, 0.8, 1.0), Vector2(120, 20))
+	# two rows of two tyres: FL FR / RL RR
+	for k in 4:
+		var x := 14.0 + (k % 2) * 118.0
+		var y := 42.0 + (k / 2) * 46.0
+		var tag: String = ["FL", "FR", "RL", "RR"][k]
+		_label(_tyre_panel, tag, 12, Color(0.75, 0.75, 0.8), Vector2(x, y))
+		var bg := ColorRect.new()
+		bg.color = Color(0, 0, 0, 0.55)
+		bg.position = Vector2(x + 22, y + 3)
+		bg.size = Vector2(66, 9)
+		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_tyre_panel.add_child(bg)
+		var fill := ColorRect.new()
+		fill.color = Color(0.35, 1.0, 0.45)
+		fill.position = Vector2(x + 22, y + 3)
+		fill.size = Vector2(66, 9)
+		fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_tyre_panel.add_child(fill)
+		_tyre_fills.append(fill)
+		_tyre_texts.append(_label(_tyre_panel, "0%", 11, Color(0.9, 0.9, 0.92), Vector2(x, y + 16)))
+	# pit / BOX BOX banner above the tyre panel
+	_pit_lbl = Label.new()
+	_pit_lbl.anchor_left = 0.0
+	_pit_lbl.anchor_top = 1.0
+	_pit_lbl.offset_left = 24
+	_pit_lbl.offset_right = 268
+	_pit_lbl.offset_top = -212
+	_pit_lbl.offset_bottom = -180
+	_pit_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style(_pit_lbl, 20, Color.WHITE)
+	_pit_lbl.modulate.a = 0.0
+	root.add_child(_pit_lbl)
+
+## wear: Array of four 0..1 values (FL, FR, RL, RR). compound: short name, col: its colour.
+func set_tyres(wear: Array, compound: String, col: Color, temp_state: int) -> void:
+	_compound_lbl.text = compound
+	_compound_lbl.add_theme_color_override("font_color", col)
+	for k in 4:
+		var w: float = clampf(float(wear[k]), 0.0, 1.0)
+		var left := 1.0 - w
+		_tyre_fills[k].size.x = 66.0 * left
+		_tyre_fills[k].color = Color(0.35, 1.0, 0.45) if w < 0.6 else (Color(1.0, 0.75, 0.2) if w < 0.85 else Color(1.0, 0.25, 0.2))
+		_tyre_texts[k].text = "%d%%" % int(round(w * 100.0))
+	_tyre_temp_lbl.text = ["COLD", "OPTIMAL", "OVERHEAT"][clampi(temp_state, 0, 2)]
+	_tyre_temp_lbl.add_theme_color_override("font_color",
+		[Color(0.6, 0.8, 1.0), Color(0.4, 1.0, 0.5), Color(1.0, 0.35, 0.25)][clampi(temp_state, 0, 2)])
+
+## Pit lane banner: "" hides it. Amber = request armed, green = in the box / serviced.
+func set_pit_banner(text: String, col := Color(1.0, 0.8, 0.3)) -> void:
+	_pit_lbl.text = text
+	_pit_lbl.add_theme_color_override("font_color", col)
+	_pit_lbl.modulate.a = 1.0 if text != "" else 0.0
+
 ## 0 = unavailable (grey), 1 = available (amber), 2 = open (green).
 func set_drs(state: int) -> void:
 	_drs_style.bg_color = DRS_COLORS[clampi(state, 0, 2)]
@@ -195,6 +279,48 @@ func set_delta(d: float, has_ref: bool) -> void:
 
 func set_gap(text: String) -> void:
 	_gap.text = text
+
+var _pos_label: Label
+var _standings: Label
+var _lights_box: HBoxContainer
+var _lights: Array[Panel] = []
+
+## Race position and the live standings list under the timing panel.
+func set_race_info(pos: int, total: int, standings: String) -> void:
+	if _pos_label == null:
+		var root: Control = get_child(0)
+		_pos_label = _label(root, "", 44, Color.WHITE, Vector2(24, 228))
+		_standings = _label(root, "", 15, Color(0.9, 0.9, 0.92), Vector2(26, 284))
+	_pos_label.text = "P%d / %d" % [pos, total] if total > 0 else ""
+	_standings.text = standings
+
+## Five red start lights: n = number lit (0-5), n < 0 hides them.
+func set_start_lights(n: int) -> void:
+	if _lights_box == null:
+		var root: Control = get_child(0)
+		_lights_box = HBoxContainer.new()
+		_lights_box.anchor_left = 0.5
+		_lights_box.anchor_right = 0.5
+		_lights_box.offset_left = -170
+		_lights_box.offset_right = 170
+		_lights_box.offset_top = 130
+		_lights_box.offset_bottom = 190
+		_lights_box.add_theme_constant_override("separation", 10)
+		root.add_child(_lights_box)
+		for k in 5:
+			var p := Panel.new()
+			p.custom_minimum_size = Vector2(60, 60)
+			var sb := StyleBoxFlat.new()
+			sb.set_corner_radius_all(30)
+			sb.border_color = Color(0.05, 0.05, 0.05)
+			sb.set_border_width_all(5)
+			p.add_theme_stylebox_override("panel", sb)
+			_lights_box.add_child(p)
+			_lights.append(p)
+	_lights_box.visible = n >= 0
+	for k in 5:
+		var sb := _lights[k].get_theme_stylebox("panel") as StyleBoxFlat
+		sb.bg_color = Color(1.0, 0.05, 0.03) if k < n else Color(0.15, 0.02, 0.02)
 
 ## Circular progress drawn while R is held.
 class RestartRing extends Control:
