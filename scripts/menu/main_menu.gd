@@ -4,12 +4,14 @@ extends Control
 const UI = preload("res://scripts/ui/ui_kit.gd")
 const GameState = preload("res://scripts/game_state.gd")
 const SettingsPanel = preload("res://scripts/ui/settings_panel.gd")
+const LeaderboardScreen = preload("res://scripts/ui/leaderboard_screen.gd")
 
 var _content: CenterContainer
 var _swatch: ColorRect
 var _first_button: Button
 var _preview: TrackPreview
 var _info: Label
+var _length_note: Label
 
 func _ready() -> void:
 	GameState.ensure_init()
@@ -32,21 +34,19 @@ func _ready() -> void:
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 30)
 	left.add_child(gap)
-	_first_button = UI.button("SINGLE PLAYER", _show_setup.bind(GameState.Mode.QUICK_RACE))
+	_first_button = UI.button("QUICK RACE", _show_setup.bind(GameState.Mode.QUICK_RACE))
 	left.add_child(_first_button)
 	var champ := UI.button("CHAMPIONSHIP   (soon)", func() -> void: pass)
 	champ.disabled = true
 	champ.tooltip_text = "Season mode arrives with the championship update."
 	left.add_child(champ)
 	left.add_child(UI.button("TIME TRIAL", _show_setup.bind(GameState.Mode.TIME_TRIAL)))
-	var board := UI.button("LEADERBOARD   (soon)", func() -> void: pass)
-	board.disabled = true
-	board.tooltip_text = "Local leaderboard arrives with the leaderboard update."
-	left.add_child(board)
+	left.add_child(UI.button("LEADERBOARD", _show_leaderboard))
 	left.add_child(UI.button("SETTINGS", _show_settings))
 	left.add_child(UI.button("QUIT", func() -> void: get_tree().quit()))
 	_content = CenterContainer.new()
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	h.add_child(_content)
 	_first_button.grab_focus()
 
@@ -79,36 +79,54 @@ func _clear() -> void:
 
 func _panel(title: String) -> VBoxContainer:
 	_clear()
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	sc.custom_minimum_size = Vector2(580, 560)
+	sc.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	sc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_content.add_child(sc)
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", UI.panel_style())
-	p.custom_minimum_size = Vector2(560, 0)
-	_content.add_child(p)
+	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(p)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 12)
+	v.add_theme_constant_override("separation", 8)
 	p.add_child(v)
-	v.add_child(UI.label(title, 30, UI.GOLD))
 	return v
 
 func _show_setup(mode: int) -> void:
 	var is_race := mode == GameState.Mode.QUICK_RACE
-	var v := _panel("QUICK RACE" if is_race else "TIME TRIAL")
+	var title := "QUICK RACE" if is_race else "TIME TRIAL"
+	var v := _panel(title)
 	var cfg: Dictionary = GameState.config
+	var btn_txt := "START RACE" if is_race else "START TIME TRIAL"
+
+	# Header with title and prominent top action button
+	var header := HBoxContainer.new()
+	header.add_child(UI.label(title, 26, UI.GOLD))
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(spacer)
+	var top_start := UI.button(btn_txt, func() -> void: GameState.start_session(mode), 18)
+	top_start.custom_minimum_size = Vector2(210, 42)
+	header.add_child(top_start)
+	v.add_child(header)
+
 	var names: Array = []
 	for t in GameState.TRACKS:
 		names.append(t["name"])
 	v.add_child(UI.row("Track", UI.option(names, int(cfg["track"]), _pick_track)))
 	_preview = TrackPreview.new()
-	_preview.custom_minimum_size = Vector2(520, 132)
+	_preview.custom_minimum_size = Vector2(500, 86)
 	v.add_child(_preview)
-	_info = UI.label("", 15, UI.TEXT_DIM)
+	_info = UI.label("", 13, UI.TEXT_DIM)
 	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_info.custom_minimum_size = Vector2(500, 0)
 	v.add_child(_info)
 	_pick_track(int(cfg["track"]))
 	if is_race:
-		var laps_idx := maxi(GameState.LAP_OPTIONS.find(int(cfg["laps"])), 0)
-		v.add_child(UI.row("Laps", UI.option(GameState.LAP_OPTIONS, laps_idx,
-			func(i: int) -> void: cfg["laps"] = GameState.LAP_OPTIONS[i])))
+		v.add_child(UI.row("Race length", UI.option(GameState.RACE_LENGTHS, int(cfg.get("length", 0)), _pick_length)))
 		v.add_child(UI.row("Difficulty", UI.option(GameState.DIFFICULTIES, int(cfg["difficulty"]),
 			func(i: int) -> void: cfg["difficulty"] = i)))
 		var ai_idx := maxi(GameState.AI_OPTIONS.find(int(cfg["ai_count"])), 0)
@@ -123,24 +141,49 @@ func _show_setup(mode: int) -> void:
 	team_row.add_child(_swatch)
 	v.add_child(team_row)
 	_pick_team(int(cfg["team"]))
-	var note := "Grid start against AI rivals. Lights out, then race for position over your chosen laps." if is_race \
-		else "Flying laps against the gold ghost. Beat your best and the medal targets."
-	var nl := UI.label(note, 15, UI.TEXT_DIM)
-	nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	nl.custom_minimum_size = Vector2(500, 0)
-	v.add_child(nl)
-	var start := UI.button("START", func() -> void: GameState.start_session(mode), 26)
+	v.add_child(UI.row("Driver name", _name_field()))
+	var start := UI.button(btn_txt, func() -> void: GameState.start_session(mode), 22)
+	start.custom_minimum_size = Vector2(500, 46)
 	v.add_child(start)
-	start.grab_focus()
+	top_start.grab_focus()
 
 func _pick_team(i: int) -> void:
 	GameState.config["team"] = i
 	if _swatch:
 		_swatch.color = GameState.TEAMS[i]["color"].lerp(Color.WHITE, 0.1)
 
+## Race length: fixed laps or a percentage distance scaled to this circuit.
+func _pick_length(i: int) -> void:
+	GameState.config["length"] = i
+	_update_length_note()
+
+func _update_length_note() -> void:
+	if _length_note == null:
+		return
+	var laps := GameState.resolve_laps(GameState.track(), int(GameState.config.get("length", 0)))
+	_length_note.text = "%d laps on this circuit" % laps
+
+func _name_field() -> LineEdit:
+	var e := LineEdit.new()
+	e.text = String(GameState.config.get("player_name", "DRIVER"))
+	e.max_length = 14
+	e.placeholder_text = "DRIVER"
+	e.custom_minimum_size = Vector2(260, 38)
+	e.text_changed.connect(func(t: String) -> void:
+		var clean := t.strip_edges().to_upper()
+		GameState.config["player_name"] = clean if clean != "" else "DRIVER")
+	return e
+
+func _show_leaderboard() -> void:
+	_clear()
+	var b := LeaderboardScreen.new()
+	b.closed.connect(_clear)
+	_content.add_child(b)
+
 ## Track choice: updates the preview drawing and the length / corners / difficulty / best lap line.
 func _pick_track(i: int) -> void:
 	GameState.config["track"] = i
+	_update_length_note()
 	var data: Dictionary = GameState.TRACKS[i]
 	if _preview:
 		_preview.set_points(GameState.track_preview(data, 220))
