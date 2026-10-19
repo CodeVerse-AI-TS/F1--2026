@@ -8,6 +8,7 @@ enum Mode { TIME_TRIAL, QUICK_RACE, CHAMPIONSHIP }
 enum State { MENU, QUALIFYING, RACE, PIT, PAUSED, RESULTS }
 
 const SETTINGS_PATH := "user://settings.cfg"
+const LEADERBOARD_PATH := "user://leaderboard.json"
 const RACE_SCENE := "res://main.tscn"
 const MENU_SCENE := "res://scenes/menu.tscn"
 const MAX_FLASHBACKS := 3
@@ -220,6 +221,48 @@ static func track_length(data: Dictionary) -> float:
 	var c := _curve_from(data)
 	c.bake_interval = 2.0
 	return c.get_baked_length()
+
+## Rough corner count: one per continuous run of meaningful direction change.
+static func track_corners(data: Dictionary) -> int:
+	var c := _curve_from(data)
+	c.bake_interval = 4.0
+	var total := c.get_baked_length()
+	var steps := maxi(int(total / 4.0), 8)
+	var corners := 0
+	var in_corner := false
+	var prev := 0.0
+	for i in steps:
+		var a := c.sample_baked(total * float(i) / float(steps))
+		var b := c.sample_baked(total * float(i + 1) / float(steps))
+		var dir := atan2(b.z - a.z, b.x - a.x)
+		if i > 0:
+			if absf(angle_difference(prev, dir)) > 0.02:
+				if not in_corner:
+					corners += 1
+					in_corner = true
+			else:
+				in_corner = false
+		prev = dir
+	return corners
+
+## Fastest recorded lap for a track (0 when nothing is recorded yet).
+## Reads the same user://leaderboard.json the leaderboard screen writes.
+static func best_lap_for(track_id: String, mode_key := "time_trial") -> float:
+	var f := FileAccess.open(LEADERBOARD_PATH, FileAccess.READ)
+	if f == null:
+		return 0.0
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return 0.0
+	var board: Dictionary = parsed
+	var entry: Dictionary = board.get(track_id, {})
+	var rows: Array = entry.get(mode_key, [])
+	var best := 0.0
+	for r in rows:
+		var t := float((r as Dictionary).get("time", 0.0))
+		if t > 0.0 and (best == 0.0 or t < best):
+			best = t
+	return best
 
 # ---------- settings ----------
 
