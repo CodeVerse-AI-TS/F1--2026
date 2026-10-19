@@ -31,7 +31,7 @@ This roadmap tracks the ongoing development of **Apex Rush**. Community contribu
 - [ ] Tyre spray particle effects behind car diffuser at high speeds.
 
 ### 🎮 Milestone 3: Input & Audio Polish
-- [ ] Controller vibration / haptic rumble on kerb strikes and wall impacts (`Input.start_joy_vibration`).
+- [x] **Circuit Minimap Overlay**: Real-time 2D track radar with live player and AI car blips.`n- [ ] Controller vibration / haptic rumble on kerb strikes and wall impacts (`Input.start_joy_vibration`).
 - [ ] Dynamic tyre screech audio on lateral grip loss.
 - [ ] High-speed wind rush sound scaling from 200 to 360 km/h.
 - [ ] Custom key rebinding menu in settings.
