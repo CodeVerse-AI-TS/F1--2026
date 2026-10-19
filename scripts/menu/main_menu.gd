@@ -99,6 +99,11 @@ func _show_setup(mode: int) -> void:
 		var laps_idx := maxi(GameState.LAP_OPTIONS.find(int(cfg["laps"])), 0)
 		v.add_child(UI.row("Laps", UI.option(GameState.LAP_OPTIONS, laps_idx,
 			func(i: int) -> void: cfg["laps"] = GameState.LAP_OPTIONS[i])))
+		v.add_child(UI.row("Difficulty", UI.option(GameState.DIFFICULTIES, int(cfg["difficulty"]),
+			func(i: int) -> void: cfg["difficulty"] = i)))
+		var ai_idx := maxi(GameState.AI_OPTIONS.find(int(cfg["ai_count"])), 0)
+		v.add_child(UI.row("AI opponents", UI.option(GameState.AI_OPTIONS, ai_idx,
+			func(i: int) -> void: cfg["ai_count"] = GameState.AI_OPTIONS[i])))
 	var team_names: Array = []
 	for t in GameState.TEAMS:
 		team_names.append(t["name"])
@@ -108,7 +113,7 @@ func _show_setup(mode: int) -> void:
 	team_row.add_child(_swatch)
 	v.add_child(team_row)
 	_pick_team(int(cfg["team"]))
-	var note := "Race the clock over your chosen laps. Rival AI, difficulty and grid size arrive with the AI update." if is_race \
+	var note := "Grid start against AI rivals. Lights out, then race for position over your chosen laps." if is_race \
 		else "Flying laps against the gold ghost. Beat your best and the medal targets."
 	var nl := UI.label(note, 15, UI.TEXT_DIM)
 	nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
