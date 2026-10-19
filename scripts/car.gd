@@ -11,6 +11,19 @@ signal wall_hit(impact: float)
 @export var drs_speed_bonus := 7.0   # extra top speed (m/s) with the flap open
 @export var drs_accel_bonus := 3.0   # less drag: extra acceleration near top speed
 @export var spark_speed := 78.0      # floor scrapes the tarmac above this speed
+@export var pit_speed_kmh := 80.0    # pit lane limiter
+@export var fuel_burn := 0.0022      # tank fraction burned per second at full throttle
+@export var fuel_mass_effect := 0.05 # how much a full tank costs in acceleration
+
+const TyreModelScript = preload("res://scripts/tyre_model.gd")
+
+## Tyres: compound, per-wheel wear, temperature and the grip they give right now.
+var tyres = TyreModelScript.new()
+var wetness := 0.0                   # 0 dry .. 1 heavy rain (set by the session)
+var fuel := 1.0                      # 1 = full tank
+var pit_limiter := false             # game.gd sets this inside the pit lane
+var pit_servicing := false           # car held in the pit box while the crew works
+var wheelspin := 0.0
 
 ## DRS state: game.gd sets drs_available and drs_in_zone; the player opens it with "drs".
 var drs_available := false
@@ -54,10 +67,32 @@ func reset_to(xf: Transform3D) -> void:
 	rpm = 4200.0
 	drs_open = false
 	drs_available = false
+	pit_servicing = false
+	pit_limiter = false
 	reset_physics_interpolation()
+
+## Called by the session after a pit stop: fresh set of tyres and a full tank.
+func service(compound: int) -> void:
+	tyres.reset(compound)
+	fuel = 1.0
+	model.set_compound_color(tyres.colour())
+
+## 1 = new, 0 = completely worn. Drives the HUD and the rain-tyre call.
+func tyre_wear() -> float:
+	return tyres.wear
 
 func _physics_process(delta: float) -> void:
 	_hit_cd -= delta
+	if pit_servicing:
+		# held in the pit box while the crew works; engine idles, no input
+		speed = move_toward(speed, 0.0, 40.0 * delta)
+		velocity = Vector3.ZERO
+		throttle_in = 0.0
+		brake_in = 1.0
+		tyres.update(delta, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, wetness)
+		model.update_visual(delta, 0.0, 0.0, 0.0, 1.0, 0.0, false)
+		_update_gearbox()
+		return
 	throttle_in = Input.get_action_strength("accelerate") if controls_enabled else 0.0
 	brake_in = Input.get_action_strength("brake") if controls_enabled else 0.0
 	var steer_in := Input.get_axis("steer_right", "steer_left") if controls_enabled else 0.0
@@ -74,9 +109,24 @@ func _physics_process(delta: float) -> void:
 	if drs_open and (brake_in > 0.1 or not drs_in_zone):
 		drs_open = false
 
-	var cap := boost_speed if boosting else top_speed
+	# tyre state: wear, temperature, the grip multiplier and wet-weather grip
+	var slide := absf(steer) * clampf(absf(speed) / 60.0, 0.0, 1.0)
+	var speed_frac := clampf(absf(speed) / top_speed, 0.0, 1.0)
+	tyres.update(delta, slide, brake_in, throttle_in, speed_frac,
+		1.0 if boosting else 0.0, kerb, wetness)
+	# normalised 0..1 grip: 1 = a fresh, warm soft tyre on a dry track
+	var grip := clampf(tyres.grip_multiplier(wetness) / 1.06, 0.15, 1.0)
+	# fuel load: heavier at the start of a stint, so acceleration and top speed grow as it burns
+	var load_factor := 1.0 - fuel * fuel_mass_effect
+	var cap := (boost_speed if boosting else top_speed) * lerpf(0.985, 1.0, load_factor)
 	if drs_open:
 		cap += drs_speed_bonus
+	if speed > cap:
+		speed = move_toward(speed, cap, 14.0 * delta)
+	# pit lane speed limiter: hard cap while the limiter is armed
+	var limit_speed := pit_speed_kmh / 3.6
+	if pit_limiter and speed > limit_speed:
+		speed = move_toward(speed, limit_speed, 30.0 * delta)
 	if throttle_in > 0.0 and speed >= -0.5:
 		var ratio := clampf(speed / cap, 0.0, 1.0)
 		var accel := lerpf(24.0, 6.0, ratio * ratio) * throttle_in
@@ -84,10 +134,10 @@ func _physics_process(delta: float) -> void:
 			accel += 10.0
 		if drs_open:
 			accel += drs_accel_bonus * ratio
+		accel *= lerpf(0.72, 1.0, grip)  # a worn or cold tyre spins up instead of pushing
+		accel *= lerpf(0.97, 1.0, load_factor)
 		if speed < cap:
 			speed = minf(speed + accel * delta, cap)
-	if speed > cap:
-		speed = move_toward(speed, cap, 14.0 * delta)
 	if brake_in > 0.0:
 		if speed > 0.5:
 			speed = move_toward(speed, 0.0, 52.0 * brake_in * delta)
@@ -97,11 +147,17 @@ func _physics_process(delta: float) -> void:
 		speed = move_toward(speed, 0.0, 40.0 * delta)
 	if throttle_in == 0.0 and brake_in == 0.0:
 		speed = move_toward(speed, 0.0, (2.5 + absf(speed) * 0.02) * delta)
+	# fuel burns off with throttle, boost and speed; the tank refills at a stop
+	fuel = maxf(fuel - fuel_burn * throttle_in * (1.0 + 0.6 * float(boosting)) * delta, 0.0)
 
-	# steering: yaw rate falls off with speed, grip never breaks
+	# steering: yaw rate falls off with speed; a worn or cold tyre turns in late and slides wide
 	steer = move_toward(steer, steer_in, (6.0 if steer_in != 0.0 else 8.0) * delta)
 	var sp := absf(speed)
-	var yaw := steer * lerpf(2.1, 0.85, clampf(sp / top_speed, 0.0, 1.0)) * clampf(sp / 5.0, 0.0, 1.0)
+	var turn := lerpf(0.82, 1.0, grip)
+	var yaw := steer * lerpf(2.1, 0.85, clampf(sp / top_speed, 0.0, 1.0)) * clampf(sp / 5.0, 0.0, 1.0) * turn
+	# understeer: below full grip the car keeps drifting outward through a corner
+	if grip < 0.9 and sp > 25.0:
+		speed = move_toward(speed, speed * lerpf(1.0, 0.985, (0.9 - grip) * 10.0), 2.0 * delta)
 	if speed < 0.0:
 		yaw = -yaw
 	rotate_y(yaw * delta)
@@ -137,6 +193,10 @@ func _physics_process(delta: float) -> void:
 func _handle_walls(fwd: Vector3) -> void:
 	for i in get_slide_collision_count():
 		var c := get_slide_collision(i)
+		var hit := c.get_collider() as Node
+		if hit and hit.is_in_group("ai_car"):
+			speed *= 0.985  # car-to-car contact: scrub a little speed, no barrier penalty
+			continue
 		var n := c.get_normal()
 		if absf(n.y) > 0.6:
 			continue
