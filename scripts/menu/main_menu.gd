@@ -94,7 +94,15 @@ func _show_setup(mode: int) -> void:
 	var names: Array = []
 	for t in GameState.TRACKS:
 		names.append(t["name"])
-	v.add_child(UI.row("Track", UI.option(names, int(cfg["track"]), func(i: int) -> void: cfg["track"] = i)))
+	v.add_child(UI.row("Track", UI.option(names, int(cfg["track"]), _pick_track)))
+	_preview = TrackPreview.new()
+	_preview.custom_minimum_size = Vector2(520, 132)
+	v.add_child(_preview)
+	_info = UI.label("", 15, UI.TEXT_DIM)
+	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_info.custom_minimum_size = Vector2(500, 0)
+	v.add_child(_info)
+	_pick_track(int(cfg["track"]))
 	if is_race:
 		var laps_idx := maxi(GameState.LAP_OPTIONS.find(int(cfg["laps"])), 0)
 		v.add_child(UI.row("Laps", UI.option(GameState.LAP_OPTIONS, laps_idx,
@@ -127,6 +135,55 @@ func _pick_team(i: int) -> void:
 	GameState.config["team"] = i
 	if _swatch:
 		_swatch.color = GameState.TEAMS[i]["color"].lerp(Color.WHITE, 0.1)
+
+## Track choice: updates the preview drawing and the length / corners / difficulty / best lap line.
+func _pick_track(i: int) -> void:
+	GameState.config["track"] = i
+	var data: Dictionary = GameState.TRACKS[i]
+	if _preview:
+		_preview.set_points(GameState.track_preview(data, 220))
+	if _info:
+		var km := GameState.track_length(data) / 1000.0
+		var best := GameState.best_lap_for(String(data["id"]))
+		var best_txt := "no lap yet" if best <= 0.0 else _fmt(best)
+		_info.text = "%.2f km   -   %d corners   -   %s   -   best %s\n%s" % [
+			km, GameState.track_corners(data),
+			GameState.TRACK_DIFFICULTY[clampi(int(data["difficulty"]), 0, 2)],
+			best_txt, data.get("desc", "")]
+
+func _fmt(t: float) -> String:
+	var m := int(t / 60.0)
+	return "%d:%06.3f" % [m, t - m * 60.0]
+
+## Flat circuit drawing for the setup panel (points arrive normalised 0..1).
+class TrackPreview extends Control:
+	var pts := PackedVector2Array()
+	var line_color := Color(1.0, 0.82, 0.3)
+
+	func set_points(p: PackedVector2Array) -> void:
+		pts = p
+		queue_redraw()
+
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.5))
+		if pts.size() < 3:
+			return
+		var mn := Vector2(INF, INF)
+		var mx := Vector2(-INF, -INF)
+		for q in pts:
+			mn = mn.min(q)
+			mx = mx.max(q)
+		var span := mx - mn
+		var s: float = minf((size.x - 26.0) / maxf(span.x, 0.0001), (size.y - 26.0) / maxf(span.y, 0.0001))
+		var off := (size - span * s) * 0.5
+		var line := PackedVector2Array()
+		for q in pts:
+			line.append(off + (q - mn) * s)
+		line.append(line[0])
+		draw_polyline(line, Color(0, 0, 0, 0.75), 7.0, true)
+		draw_polyline(line, line_color, 3.0, true)
+		draw_circle(line[0], 5.0, Color(1, 1, 1))
+		draw_circle(line[0], 2.5, Color(0.1, 0.1, 0.1))
 
 func _show_settings() -> void:
 	_clear()
