@@ -14,6 +14,8 @@ const MENU_SCENE := "res://scenes/menu.tscn"
 const MAX_FLASHBACKS := 3
 const CAMERA_NAMES := ["CHASE", "FAR CHASE", "COCKPIT", "HOOD", "TV", "TOP DOWN"]
 const QUALITY_NAMES := ["Low", "Medium", "High"]
+## Weather presets: index into WEATHER_NAMES, fed to weather.gd setup().
+const WEATHER_NAMES := ["Dry", "Changeable", "Wet"]
 const DIFFICULTIES := ["Rookie", "Pro", "Legend"]
 const LAP_OPTIONS := [3, 5, 10]
 ## Race length choices: fixed lap counts first, then percentage distances that are
@@ -23,7 +25,14 @@ const RACE_LENGTHS := ["3 laps", "5 laps", "10 laps", "25% distance", "50% dista
 const RACE_TARGET_SECONDS := [360.0, 480.0, 720.0]
 const AI_OPTIONS := [0, 3, 5, 7, 9]
 ## Base AI pace (fraction of the ideal lap) per difficulty: Rookie, Pro, Legend.
-const AI_SKILL := [0.88, 0.94, 0.985]
+const AI_SKILL := [0.88, 0.98, 1.03]
+## Behaviour per difficulty, read by ai_car.gd apply_profile(): braking force (m/s^2),
+## aggression band, ERS deployment willingness, divebomb willingness, mistake rate.
+const AI_PROFILES := [
+	{"brake": 36.0, "aggression": Vector2(0.2, 0.5), "ers": 0.12, "dive": 0.15, "mistakes": 0.030},
+	{"brake": 48.0, "aggression": Vector2(0.5, 0.8), "ers": 0.55, "dive": 0.55, "mistakes": 0.020},
+	{"brake": 54.0, "aggression": Vector2(0.75, 1.0), "ers": 0.95, "dive": 0.90, "mistakes": 0.008},
+]
 const DRIVERS := ["M. Varela", "K. Osei", "L. Brandt", "T. Nakamura", "R. Duval",
 	"S. Kowalski", "A. Romano", "J. Hale", "D. Ferreira", "E. Lindqvist", "P. Mehta"]
 ## Track catalogue. A track is either explicit "points" or a superellipse loop
@@ -129,10 +138,18 @@ const ACTIONS := ["accelerate", "brake", "steer_left", "steer_right", "boost", "
 
 static var mode: int = Mode.TIME_TRIAL
 static var state: int = State.MENU
+## "setup" is the car setup screen: 0..1 sliders, 0.5 is neutral on every axis.
 static var config := {"track": 0, "laps": 3, "length": 0, "difficulty": 1, "team": 0,
-	"ai_count": 7, "player_name": "DRIVER"}
+	"ai_count": 7, "player_name": "DRIVER", "weather": 1,
+	"setup": {"aero": 0.5, "susp": 0.5, "bias": 0.5}}
 static var flashbacks := MAX_FLASHBACKS
-static var settings := {"master": 0.8, "music": 0.6, "sfx": 0.9, "quality": 2, "camera": 0, "units": 0}
+## Championship sessions: the race scene loads as a qualifying run first, then as the race.
+static var qualifying := false
+## Championship race distance in laps (kept short so a full season stays playable).
+static var championship_laps := 4
+## traction / brake_aid are driving aids: 0 off, 1 on. They only help the player.
+static var settings := {"master": 0.8, "music": 0.6, "sfx": 0.9, "quality": 2, "camera": 0, "units": 0,
+	"show_fps": 0, "traction": 1, "brake_aid": 0}
 static var _initialized := false
 
 ## Call once from any scene's _ready (menu and race both do). Safe to call repeatedly.
@@ -220,6 +237,18 @@ static func track_preview(data: Dictionary, steps := 180) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	for v in raw:
 		out.append((v - minv) / span)
+	return out
+
+## Centre line in raw world XZ metres, on the same curve the race track builds.
+## The minimap needs this: car positions are world space, so they can only be
+## projected against an outline that lives in the same space.
+static func track_world_points(data: Dictionary, steps := 180) -> PackedVector2Array:
+	var c := _curve_from(data)
+	var total := c.get_baked_length()
+	var out := PackedVector2Array()
+	for i in steps + 1:
+		var p := c.sample_baked(total * float(i) / float(steps))
+		out.append(Vector2(p.x, p.z))
 	return out
 
 ## Lap length in metres, measured on the same curve the race track builds.
