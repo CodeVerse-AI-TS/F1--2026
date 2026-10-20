@@ -20,10 +20,36 @@ const TyreModelScript = preload("res://scripts/tyre_model.gd")
 ## Tyres: compound, per-wheel wear, temperature and the grip they give right now.
 var tyres = TyreModelScript.new()
 var wetness := 0.0                   # 0 dry .. 1 heavy rain (set by the session)
+## Bodywork damage: 0 = pristine, 1 = about to retire. Cheap arcade penalty, repaired in the pits.
+var damage := 0.0
+var damage_rate := 0.012              # damage added per impact unit above the threshold
+var damage_repair := 0.45             # how much of the damage a pit stop repairs
 var fuel := 1.0                      # 1 = full tank
 var pit_limiter := false             # game.gd sets this inside the pit lane
 var pit_servicing := false           # car held in the pit box while the crew works
 var wheelspin := 0.0
+## m/s. When a safety car is out the session caps the field to this pace; 0 disables it.
+var neutral_limit := 0.0
+
+## Driving aids, 0 = off .. 1 = full. Set once from the settings by game.gd.
+var traction_assist := 0.0
+var brake_assist := 0.0
+## Corner speed the session expects here (m/s); 0 disables the braking aid.
+var target_speed := 0.0
+## Car setup multipliers from the setup screen: they trade top speed against grip.
+var setup_grip := 1.0
+var setup_top := 1.0
+var setup_brake := 1.0
+
+## Called once by the session with the saved circuit setup.
+func apply_setup(s: Dictionary) -> void:
+	var aero := clampf(float(s.get("aero", 0.5)), 0.0, 1.0)
+	var susp := clampf(float(s.get("susp", 0.5)), 0.0, 1.0)
+	var bias := clampf(float(s.get("bias", 0.5)), 0.0, 1.0)
+	# low aero: less drag (more top speed) but less cornering grip, and the reverse
+	setup_top = lerpf(1.04, 0.96, aero)
+	setup_grip = lerpf(0.95, 1.05, aero) * lerpf(0.97, 1.03, susp)
+	setup_brake = lerpf(0.94, 1.06, bias)
 
 ## DRS state: game.gd sets drs_available and drs_in_zone; the player opens it with "drs".
 var drs_available := false
@@ -69,12 +95,14 @@ func reset_to(xf: Transform3D) -> void:
 	drs_available = false
 	pit_servicing = false
 	pit_limiter = false
+	damage = 0.0
 	reset_physics_interpolation()
 
 ## Called by the session after a pit stop: fresh set of tyres and a full tank.
 func service(compound: int) -> void:
 	tyres.reset(compound)
 	fuel = 1.0
+	damage = maxf(damage - damage_repair, 0.0)  # the crew taps out the worst dents
 	model.set_compound_color(tyres.colour())
 
 ## 1 = new, 0 = completely worn. Drives the HUD and the rain-tyre call.
@@ -115,12 +143,19 @@ func _physics_process(delta: float) -> void:
 	tyres.update(delta, slide, brake_in, throttle_in, speed_frac,
 		1.0 if boosting else 0.0, kerb, wetness)
 	# normalised 0..1 grip: 1 = a fresh, warm soft tyre on a dry track
-	var grip := clampf(tyres.grip_multiplier(wetness) / 1.06, 0.15, 1.0)
+	var grip := clampf(tyres.grip_multiplier(wetness) / 1.06, 0.15, 1.0) * setup_grip
+	# a bent car loses aero and turns in worse, so damage costs lap time until repaired
+	grip *= lerpf(1.0, 0.84, damage)
 	# fuel load: heavier at the start of a stint, so acceleration and top speed grow as it burns
 	var load_factor := 1.0 - fuel * fuel_mass_effect
-	var cap := (boost_speed if boosting else top_speed) * lerpf(0.985, 1.0, load_factor)
+	var cap := (boost_speed if boosting else top_speed) * setup_top * lerpf(0.985, 1.0, load_factor)
 	if drs_open:
 		cap += drs_speed_bonus
+	cap *= lerpf(1.0, 0.93, damage)  # damaged bodywork costs top speed
+	# neutralised race: the safety car sets the pace for the whole field
+	if neutral_limit > 0.0:
+		cap = minf(cap, neutral_limit)
+		boosting = false
 	if speed > cap:
 		speed = move_toward(speed, cap, 14.0 * delta)
 	# pit lane speed limiter: hard cap while the limiter is armed
@@ -135,12 +170,19 @@ func _physics_process(delta: float) -> void:
 		if drs_open:
 			accel += drs_accel_bonus * ratio
 		accel *= lerpf(0.72, 1.0, grip)  # a worn or cold tyre spins up instead of pushing
+		# traction control: trims torque instead of lighting the rear tyres up
+		if traction > 0.0 and grip < 0.95:
+			accel *= lerpf(1.0, lerpf(0.78, 1.0, grip), traction)
 		accel *= lerpf(0.97, 1.0, load_factor)
 		if speed < cap:
 			speed = minf(speed + accel * delta, cap)
+	# braking assist: bleeds speed automatically when the corner ahead demands it
+	if brake_assist > 0.0 and target_speed > 1.0 and speed > target_speed * 1.02:
+		var over := clampf((speed - target_speed) / maxf(target_speed, 1.0), 0.0, 1.0)
+		speed = move_toward(speed, target_speed, 46.0 * brake_assist * over * delta)
 	if brake_in > 0.0:
 		if speed > 0.5:
-			speed = move_toward(speed, 0.0, 52.0 * brake_in * delta)
+			speed = move_toward(speed, 0.0, 52.0 * setup_brake * brake_in * delta)
 		else:
 			speed = move_toward(speed, -14.0, 12.0 * brake_in * delta)
 	if throttle_in > 0.0 and speed < 0.0:
@@ -185,10 +227,13 @@ func _physics_process(delta: float) -> void:
 	var sparks := on_floor and speed > 40.0 and (kerb > 0.3 or speed > spark_speed or _land_t > 0.0)
 	model.set_drs(drs_open)
 	model.update_visual(delta, speed, steer, _boost_vis, brake_in, throttle_in, sparks)
-	if on_floor:
-		var n_local := (global_basis.inverse() * get_floor_normal()).normalized()
-		var q := Quaternion(Vector3.UP, n_local)
-		model.quaternion = model.quaternion.slerp(q, 0.2)
+	var floor_n := get_floor_normal()
+	if on_floor and floor_n.length_squared() > 0.001:
+		# align the body to the surface; a zero normal on the first grounded frame
+		# would make Quaternion() fail, so both vectors are checked first
+		var n_local := (global_basis.inverse() * floor_n).normalized()
+		if n_local.length_squared() > 0.001:
+			model.quaternion = model.quaternion.slerp(Quaternion(Vector3.UP, n_local), 0.2)
 
 func _handle_walls(fwd: Vector3) -> void:
 	for i in get_slide_collision_count():
@@ -213,6 +258,8 @@ func _handle_walls(fwd: Vector3) -> void:
 		global_position += n * 0.05
 		if impact > 8.0 and _hit_cd <= 0.0:
 			_hit_cd = 0.6
+			# bodywork takes a hit; the crew can only patch part of it in the pits
+			damage = clampf(damage + maxf(impact - 8.0, 0.0) * damage_rate, 0.0, 1.0)
 			wall_hit.emit(impact)
 		break
 
