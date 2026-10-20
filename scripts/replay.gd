@@ -98,6 +98,10 @@ func _transform_at(t: float) -> Transform3D:
 			var xb: Transform3D = b["xf"]
 			var out := xa
 			out.origin = xa.origin.lerp(xb.origin, w)
-			out.basis = xa.basis.slerp(xb.basis, w)
+			# Basis.slerp() casts to a Quaternion internally, and a recorded car basis
+			# carries a slightly non-unit scale, so orthonormalise both first
+			var qa := xa.basis.orthonormalized().get_rotation_quaternion()
+			var qb := xb.basis.orthonormalized().get_rotation_quaternion()
+			out.basis = Basis(qa.slerp(qb, w))
 			return out
 	return samples[n - 1]["xf"]
