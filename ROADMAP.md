@@ -4,8 +4,13 @@ This roadmap tracks the ongoing development of **Apex Rush**. Community contribu
 
 ---
 
-## ✅ Completed in v1.1.0
+## ✅ Completed in v1.2.0
 
+- [x] **Full Championship Season**: 5-round calendar with qualifying sessions, official F1 points scoring (25-18-15-12-10-8-6-4-2-1), and persistent driver/constructor standings.
+- [x] **Dynamic Weather & Rain Physics**: CPU particle rain emitters, dynamic wetness transitions (Dry, Damp, Light Rain, Heavy Rain), and tyre compound water grip scaling.
+- [x] **Safety Car System**: Deploys on major incidents, illuminates amber flashing roof lights, neutralises the race, and bunches the field at a governed pace.
+- [x] **Hyper-Competitive AI Overhaul**: AI drivers now deploy ERS overtake boosts (~98 m/s), take slipstream drafts (+12% acceleration), execute inside-line divebombs in braking zones, and defend lines.
+- [x] **Directional Minimap Marker**: Real-time 2D radar with animated heading chevron, pulsating radar halo, and live position tag (`P1..Pn`).
 - [x] **Autonomous AI Rivals**: Spline-pathfinding AI drivers with individual skill, aggression, overtaking, defending, and pit stop tactics.
 - [x] **Tyre Degradation & Compounds**: Realistic physics simulation of Soft, Medium, Hard, Intermediate, and Wet compounds with wear cliffs and thermal windows.
 - [x] **Active Pit Lane Infrastructure**: Procedural pit lane road mesh, garages, illuminated pit boxes, and 80 km/h speed limiter enforcement.
@@ -18,20 +23,14 @@ This roadmap tracks the ongoing development of **Apex Rush**. Community contribu
   - Harbour Night Sprint (floodlit evening street race)
 - [x] **Environmental Themes**: Street, Speed, Technical, Desert, and Night lighting presets.
 - [x] **5-Red-Lights Grid Start**: Authentic Formula 1 starting sequence with random reaction delays.
-- [x] **Live Race Standings**: Real-time position tracking (`P1..Pn`), gap to car ahead, and post-race classification board.
+- [x] **Persistent Local Leaderboards**: Automatic submission of best lap times and race completions per circuit.
 
 ---
 
 ## 🚀 Upcoming Milestones (Help Wanted)
 
-### 🌧️ Milestone 2: Dynamic Weather & Wet Physics (In Progress)
-- [ ] Dynamic rain particle system attached to the camera.
-- [ ] Wet asphalt shader with screen-space puddles and spray reflections.
-- [ ] Grip reduction calculation based on track saturation and tyre compound suitability.
-- [ ] Tyre spray particle effects behind car diffuser at high speeds.
-
 ### 🎮 Milestone 3: Input & Audio Polish
-- [x] **Circuit Minimap Overlay**: Real-time 2D track radar with live player and AI car blips.`n- [ ] Controller vibration / haptic rumble on kerb strikes and wall impacts (`Input.start_joy_vibration`).
+- [ ] Controller vibration / haptic rumble on kerb strikes and wall impacts (`Input.start_joy_vibration`).
 - [ ] Dynamic tyre screech audio on lateral grip loss.
 - [ ] High-speed wind rush sound scaling from 200 to 360 km/h.
 - [ ] Custom key rebinding menu in settings.

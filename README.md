@@ -17,14 +17,17 @@
 
 **Apex Rush** captures the fantasy of threading a modern open-wheel racing machine through tight circuits at over 300 km/h. Built from the ground up in Godot 4, it merges the authentic atmosphere of Formula 1 with fast-paced, accessible arcade mechanics: instant throttle, responsive grip, overtake boost, and precision braking.
 
-Compete against intelligent **AI rivals** in multi-lap Grand Prix sprints with active **pit stops and tyre strategy**, or chase tenths against the Gold ghost car in **Time Trial**.
+Battle for the **World Championship** across a 5-round season, survive **dynamic rainstorms and safety car neutralisations**, battle hyper-aggressive **AI rivals with ERS boost and slipstream drafting**, or chase hundredths against the Gold ghost car in **Time Trial**.
 
 ---
 
 ## ✨ Features
 
-- 🏎️ **Arcade-Sim Hybrid Handling**: Top speeds exceeding 317 km/h (up to 364 km/h with overtake boost), sharp braking zones, and tuned floor-snap aerodynamics.
-- 🤖 **Grid Start & AI Rivals**: Full race grids against intelligent AI drivers that follow braking-aware speed curves, overtake, defend position, and execute pit strategies.
+- 🏆 **Full Championship Season**: 5-round calendar across all circuits with dedicated Saturday qualifying sessions (flying lap sets your grid slot), official FIA points scoring (25-18-15-12-10-8-6-4-2-1), and persistent driver & constructor standings.
+- 🌧️ **Dynamic Weather & Rain Physics**: Transitions between Dry, Damp, Light Rain, and Heavy Rain with CPU particle rain emitters, atmospheric fog, and water grip penalties for dry compounds.
+- 🚨 **Safety Car Neutralisation**: Deploys when crashes occur, bunches up the pack at a governed pace with flashing amber roof lights, and restarts the race with a flying green flag.
+- 🤖 **Hyper-Competitive AI Rivals**: AI drivers deploy tactical ERS overtake boosts (hitting ~98 m/s), take aerodynamic slipstream tows (+12% acceleration), execute inside-line divebombs into braking zones, and defend lines.
+- 🗺️ **High-Visibility Directional Minimap**: Real-time 2D track radar with an animated heading chevron, pulsating gold radar halo, and live position tag (`P1..Pn`).
 - 🛞 **Tyre Wear & Thermal Simulation**: Soft, Medium, Hard, Intermediate, and Wet compounds with per-wheel degradation, temperature windows, and cliff drops past 80% wear.
 - ⛽ **Fuel Mass Dynamics**: Fuel burns off with throttle and boost usage, making the car lighter and more agile over the course of a stint.
 - 🛠️ **Active Pit Lane & Crew Stops**: Request a pit stop (`P`), manage the 80 km/h pit lane speed limiter, and receive fresh rubber in animated pit stalls.
@@ -87,19 +90,23 @@ f-12026/
 │   ├── main.tscn            # Primary 3D race circuit scene
 │   └── menu.tscn            # Main menu, team selection, and settings
 ├── scripts/
-│   ├── ai_car.gd            # Autonomous rival AI with pathfinding and pit tactics
-│   ├── car.gd               # Physics, input handling, DRS, fuel mass, and pit limiter
+│   ├── ai_car.gd            # Competitive AI with ERS boost, slipstream, and divebombs
+│   ├── car.gd               # Physics, input handling, DRS, weather wetness, and pit limiter
 │   ├── car_model.gd         # Dynamic car geometry, liveries, sparks, wing animations
+│   ├── championship.gd      # 5-round championship season logic and points calculation
 │   ├── chase_camera.gd      # Smooth dynamic multi-view camera controller
 │   ├── engine_audio.gd      # Dynamic RPM pitch and exhaust audio synth
-│   ├── game.gd              # Session rules, race starts, pit crew servicing, flashbacks
+│   ├── game.gd              # Session rules, race starts, safety cars, flashbacks
 │   ├── game_state.gd        # Track presets, environmental themes, teams, persistent config
 │   ├── ghost.gd             # Ghost car recording and playback
-│   ├── hud.gd               # Speedometer, tyre telemetry, standings, and start lights
+│   ├── hud.gd               # Speedometer, tyre telemetry, standings, weather, and start lights
+│   ├── leaderboard.gd       # Persistent lap time and race finish recording
+│   ├── safety_car.gd        # Safety car deployment, pace control, and flashing lights
 │   ├── track.gd             # Procedural 3D spline tracks, pit lane, and buildings
 │   ├── tyre_model.gd        # Soft/Med/Hard/Wet tyre compounds, wear, and thermal grip
-│   ├── menu/                # Main menu UI logic
-│   └── ui/                  # Pause menu, settings panels, and reusable UI components
+│   ├── weather.gd           # Dynamic rain particle simulation and wetness transitions
+│   ├── menu/                # Main menu UI and championship registration logic
+│   └── ui/                  # Minimap, pause menu, standings screen, and UI components
 ├── shaders/                 # Custom GLSL / Godot shaders (film grade, lens flare)
 └── starter/                 # Materials, urban textures, and visual packs
 ```
