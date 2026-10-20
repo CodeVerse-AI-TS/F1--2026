@@ -30,6 +30,8 @@ var rights := PackedVector3Array()
 var tans := PackedVector3Array()
 var _time_at := PackedFloat32Array()
 var _speed := PackedFloat32Array()
+## Bank angle in degrees per sample, blended from the circuit's curvature.
+var _bank_angle := PackedFloat32Array()
 ## DRS zones as track offsets (metres): {"detect", "start", "end"}. start may sit after the line.
 var drs_zones: Array[Dictionary] = []
 ## Pit lane: entry/exit offsets and the pit box where the crew works.
@@ -56,7 +58,7 @@ var _hi_z := 190.0
 func _ready() -> void:
 	data = GameState.track() if data.is_empty() else data
 	if theme.is_empty():
-		theme = GameState.THEMES.get(String(data.get("theme", "street")), GameState.THEMES["street"])
+		theme = GameState.THEMES.get(String(data.get("theme", "forest")), GameState.THEMES["forest"])
 	half_w = float(data.get("half_w", BASE_HALF))
 	_rng.seed = int(data.get("seed", 1979))
 	_apply_sky()
@@ -89,7 +91,7 @@ func _apply_sky() -> void:
 		env.fog_enabled = true
 		env.fog_light_color = theme["haze"]
 		env.fog_density = float(theme["fog"])
-		env.fog_sky_affect = 1.0
+		env.fog_sky_affect = 0.65
 		if String(data.get("theme", "")) == "night":
 			env.glow_enabled = true
 			env.glow_intensity = 0.55
@@ -119,11 +121,28 @@ func sample_pos(off: float) -> Vector3:
 func sample_tangent(off: float) -> Vector3:
 	return (sample_pos(off + 1.5) - sample_pos(off - 1.5)).normalized()
 
+## Surface normal at an offset: up, tilted by the banking this circuit declares there.
+## Real circuits bank Eau Rouge, the Parabolica and Becketts, which keeps the car
+## pinned to the tarmac at high cornering load instead of skating off the crown.
+func surface_up(off: float, bank_scale := 1.0) -> Vector3:
+	var r := _right_at(off)
+	var bank := banking_at(off) * bank_scale
+	if absf(bank) < 0.0001:
+		return Vector3.UP
+	return (Vector3.UP + r * tan(deg_to_rad(bank))).normalized()
+
+## Bank angle in degrees at this offset (+ tips the right side of the road up).
+func banking_at(off: float) -> float:
+	if _bank_angle.size() == 0:
+		return 0.0
+	var i := clampi(int(fposmod(off, length) / seg), 0, _bank_angle.size() - 1)
+	return _bank_angle[i]
+
 func get_xform(off: float) -> Transform3D:
 	var p := sample_pos(off)
 	var t := sample_tangent(off)
 	var tf := Vector3(t.x, 0.0, t.z).normalized()
-	return Transform3D(Basis.looking_at(tf, Vector3.UP), p)
+	return Transform3D(Basis.looking_at(tf, surface_up(off)), p)
 
 func closest_offset(world_pos: Vector3) -> float:
 	return curve.get_closest_offset(world_pos - global_position)
@@ -137,6 +156,40 @@ func _sample() -> void:
 		pts.append(sample_pos(off))
 		tans.append(t)
 		rights.append(t.cross(Vector3.UP).normalized())
+	_build_banking()
+
+## Corners tilt into the turn so a car held to the tarmac at high G stays planted.
+## The angle tracks how fast the heading is turning and is smoothed over ~20 m so the
+## road rolls into Eau Rouge, Parabolica and Becketts instead of snapping.
+func _build_banking() -> void:
+	var gain: float = float(data.get("banking", 1.0))
+	_bank_angle.resize(count)
+	if gain <= 0.0:
+		_bank_angle.fill(0.0)
+		return
+	var raw := PackedFloat32Array()
+	raw.resize(count)
+	for i in count:
+		var t0 := tans[(i - 4 + count) % count]
+		var t1 := tans[(i + 4) % count]
+		var turn := t0.signed_angle_to(t1, Vector3.UP)  # + = turning left
+		raw[i] = clampf(turn * 9.0 * gain, 0.0, 7.0)     # lean into a left-hander
+	var span := int(20.0 / maxf(seg, 0.5))
+	for i in count:
+		var acc := 0.0
+		for k in range(-span, span + 1):
+			acc += raw[(i + k + count * 2) % count]
+		_bank_angle[i] = acc / float(span * 2 + 1)
+
+## Surface normal at a sample, tilted by the bank angle.
+func _normal_at(i: int) -> Vector3:
+	var n := rights[i].cross(tans[i]).normalized()
+	if n.y < 0.0:
+		n = -n
+	var a := deg_to_rad(_bank_angle[i]) if i < _bank_angle.size() else 0.0
+	if absf(a) < 0.0001:
+		return n
+	return n.rotated(tans[i], a)
 
 # ---------- mesh helpers ----------
 
@@ -183,11 +236,14 @@ func _build_road() -> void:
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i in count:
 		var j := (i + 1) % count
-		var n := rights[i].cross(tans[i]).normalized()
-		var a := pts[i] - rights[i] * half_w
-		var b := pts[j] - rights[j] * half_w
-		var c := pts[j] + rights[j] * half_w
-		var d := pts[i] + rights[i] * half_w
+		var n := _normal_at(i)
+		# the two edges drop or rise by the bank angle so the surface really tilts
+		var lift_i := tan(deg_to_rad(_bank_angle[i])) * half_w
+		var lift_j := tan(deg_to_rad(_bank_angle[j])) * half_w
+		var a := pts[i] - rights[i] * half_w + Vector3.UP * lift_i
+		var b := pts[j] - rights[j] * half_w + Vector3.UP * lift_j
+		var c := pts[j] + rights[j] * half_w - Vector3.UP * lift_j
+		var d := pts[i] + rights[i] * half_w - Vector3.UP * lift_i
 		var u0 := i * seg
 		var u1 := u0 + seg
 		_quad(st, [a, b, c, d], [Vector2(0, u0), Vector2(0, u1), Vector2(1, u1), Vector2(1, u0)], n)
@@ -324,10 +380,24 @@ func _build_drs() -> void:
 		zones = [{"detect": 0.94, "start": 0.03, "end": 0.22}]
 	for z in zones:
 		var zz: Dictionary = z
+		# Real circuits declare their detection loop and activation line in metres
+		# from the start line (Kemmel at Spa, the Rettifilo straight at Monza, and so
+		# on). Older entries use lap fractions, so both forms are accepted here.
+		var detect := 0.94
+		var start := 0.03
+		var end := 0.22
+		if zz.has("detect_m") or zz.has("start_m") or zz.has("end_m"):
+			detect = float(zz.get("detect_m", 0.0)) / maxf(length, 1.0)
+			start = float(zz.get("start_m", 0.0)) / maxf(length, 1.0)
+			end = float(zz.get("end_m", 0.0)) / maxf(length, 1.0)
+		else:
+			detect = float(zz.get("detect", detect))
+			start = float(zz.get("start", start))
+			end = float(zz.get("end", end))
 		drs_zones.append({
-			"detect": fposmod(float(zz.get("detect", 0.94)) * length, length),
-			"start": fposmod(float(zz.get("start", 0.03)) * length, length),
-			"end": fposmod(float(zz.get("end", 0.22)) * length, length),
+			"detect": fposmod(detect * length, length),
+			"start": fposmod(start * length, length),
+			"end": fposmod(end * length, length),
 		})
 	var white := StandardMaterial3D.new()
 	white.albedo_color = Color(0.95, 0.95, 0.95)
@@ -785,24 +855,47 @@ func _build_lamps() -> void:
 
 func _build_hills() -> void:
 	var rock: Material = load("res://starter/mat-stone-brick/rock_triplanar.tres")
-	var spots := [
-		[Vector3(-450, -40, -1050), Vector3(520, 260, 260)],
-		[Vector3(250, -50, -1120), Vector3(420, 200, 240)],
-		[Vector3(-1050, -40, -650), Vector3(260, 230, 520)],
-		[Vector3(-1100, -40, -50), Vector3(240, 170, 380)],
-		[Vector3(700, -60, -800), Vector3(300, 180, 400)],
-	]
+	# Compute bounding extents of the circuit so hills frame the skyline without encroaching
+	var lo := Vector3(1e9, 0, 1e9)
+	var hi := Vector3(-1e9, 0, -1e9)
+	for p in pts:
+		lo = Vector3(minf(lo.x, p.x), 0, minf(lo.z, p.z))
+		hi = Vector3(maxf(hi.x, p.x), 0, maxf(hi.z, p.z))
+	var c := (lo + hi) * 0.5
+
 	var sm := SphereMesh.new()
 	sm.radius = 1.0
 	sm.height = 2.0
 	sm.radial_segments = 32
 	sm.rings = 16
-	for sp in spots:
+
+	var candidate_spots: Array = [
+		[Vector3(lo.x - 450, -60, c.z - 250), Vector3(320, 190, 360)],
+		[Vector3(lo.x - 380, -50, hi.z + 240), Vector3(280, 160, 280)],
+		[Vector3(hi.x + 420, -70, c.z + 100), Vector3(340, 220, 340)],
+		[Vector3(hi.x + 320, -60, lo.z - 220), Vector3(300, 180, 300)],
+		[Vector3(c.x, -80, lo.z - 480), Vector3(450, 240, 280)],
+		[Vector3(c.x + 280, -70, hi.z + 440), Vector3(360, 200, 320)],
+	]
+	for sp in candidate_spots:
+		var pos: Vector3 = sp[0]
+		var scl: Vector3 = sp[1]
+		# Ensure hill sphere surface never comes within 80 m of any point on the circuit
+		var cp := curve.get_closest_point(pos - global_position)
+		var dist_to_track := Vector2(pos.x - cp.x, pos.z - cp.z).length()
+		var max_r := maxf(scl.x, scl.z) * 0.5
+		if dist_to_track < max_r + 80.0:
+			var push_dir := (Vector2(pos.x, pos.z) - Vector2(cp.x, cp.z)).normalized()
+			if push_dir.length_squared() < 0.01:
+				push_dir = Vector2(0, 1)
+			var safe_pos := Vector2(cp.x, cp.z) + push_dir * (max_r + 140.0)
+			pos.x = safe_pos.x
+			pos.z = safe_pos.y
 		var mi := MeshInstance3D.new()
 		mi.mesh = sm
 		mi.material_override = rock
-		mi.position = sp[0]
-		mi.scale = sp[1]
+		mi.position = pos
+		mi.scale = scl
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(mi)
 
