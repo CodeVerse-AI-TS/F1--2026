@@ -26,9 +26,9 @@ static func load_profile() -> void:
 	var f := FileAccess.open(PATH, FileAccess.READ)
 	if f == null:
 		return
-	var parsed = JSON.parse_string(f.get_as_text())
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
 	if parsed is Dictionary:
-		unlocked = parsed
+		unlocked = parsed as Dictionary
 
 static func save_profile() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
