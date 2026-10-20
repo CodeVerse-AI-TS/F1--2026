@@ -82,7 +82,10 @@ var _boost_vis := 0.0
 func _ready() -> void:
 	model = CarModelScript.new()
 	add_child(model)
-	floor_snap_length = 1.2
+	# long enough to stay pinned over the crests and banking of a real circuit
+	# (Eau Rouge, Raidillon, the Parabolica) without launching off the surface
+	floor_snap_length = 2.5
+	floor_constant_speed = true
 	floor_max_angle = deg_to_rad(45.0)
 
 func reset_to(xf: Transform3D) -> void:

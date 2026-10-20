@@ -230,7 +230,8 @@ func _pick_track(i: int) -> void:
 	if _preview:
 		_preview.set_points(GameState.track_preview(data, 220))
 	if _info:
-		var km := GameState.track_length(data) / 1000.0
+		# real circuits publish their official length; the spline measurement is a fallback
+		var km := float(data["length_km"]) if data.has("length_km") else GameState.track_length(data) / 1000.0
 		var best := GameState.best_lap_for(String(data["id"]))
 		var best_txt := "no lap yet" if best <= 0.0 else _fmt(best)
 		_info.text = "%.2f km   -   %d corners   -   %s   -   best %s\n%s" % [
