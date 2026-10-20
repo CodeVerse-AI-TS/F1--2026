@@ -10,6 +10,15 @@ const GameState = preload("res://scripts/game_state.gd")
 const AICar = preload("res://scripts/ai_car.gd")
 const Tyres = preload("res://scripts/tyre_model.gd")
 const Leaderboard = preload("res://scripts/leaderboard.gd")
+const Championship = preload("res://scripts/championship.gd")
+const StandingsScreen = preload("res://scripts/ui/standings_screen.gd")
+const Weather = preload("res://scripts/weather.gd")
+const SafetyCar = preload("res://scripts/safety_car.gd")
+
+## Safety car: chance per completed lap that the race is neutralised, and how long it stays out.
+@export var safety_car_chance := 0.22
+@export var safety_car_duration := 24.0
+@export var safety_car_pace := 27.0   # m/s the field is held to behind it
 
 @export var pit_entry_speed_limit := 100.0  # km/h: above this on pit entry = speeding penalty
 @export var pit_fast_stop := 2.4            # minimum crew time (seconds)
@@ -30,6 +39,11 @@ var _pit_stops := 0
 @export var skill_spread := 0.025      # random pace variation between AI drivers
 
 var ais: Array = []
+## Weather node (rain, sky and the grip it feeds the cars) and the safety car.
+var weather: Node3D
+var safety: Node3D
+var safety_active := false
+var _safety_t := 0.0
 var race_started := false
 var _lights_t := 0.0
 var _go_delay := 0.5
@@ -72,12 +86,23 @@ var _cur_trace := PackedFloat32Array()   # lap time at every delta_bucket metres
 var _best_trace := PackedFloat32Array()
 var _last_bucket := -1
 var _drs_was_in_zone := false
+## Championship state for this session.
+var is_championship := false
+var is_qualifying := false
+var _round_recorded := false
+var standings: CanvasLayer
 
 func _ready() -> void:
 	GameState.ensure_init()
 	is_race = GameState.mode != GameState.Mode.TIME_TRIAL
-	# race length: fixed lap options, or a percentage distance scaled to this circuit
-	total_laps = GameState.resolve_laps(track.data, int(GameState.config.get("length", 0))) if is_race else 0
+	is_championship = GameState.mode == GameState.Mode.CHAMPIONSHIP
+	is_qualifying = GameState.qualifying
+	# race length: championship rounds are fixed and short; quick races follow the
+	# chosen lap count or percentage distance scaling
+	if is_championship:
+		total_laps = GameState.championship_laps
+	else:
+		total_laps = GameState.resolve_laps(track.data, int(GameState.config.get("length", 0))) if is_race else 0
 	gold = track.ideal_time * 1.04
 	silver = track.ideal_time * 1.12
 	bronze = track.ideal_time * 1.25
@@ -87,15 +112,74 @@ func _ready() -> void:
 	var team: Dictionary = GameState.team()
 	car.model.set_livery(team)
 	car.wall_hit.connect(_on_wall_hit)
+	_setup_weather()
+	_setup_safety_car()
 	cam.set_view(int(GameState.settings["camera"]), true)
 	pause_menu = PauseMenu.new()
 	add_child(pause_menu)
 	pause_menu.resume_pressed.connect(_on_resume)
 	pause_menu.restart_pressed.connect(func() -> void: _on_resume(); restart())
 	pause_menu.camera_pressed.connect(_cycle_camera)
+	pause_menu.continue_pressed.connect(_on_round_continue)
+	if is_qualifying:
+		_start_qualifying_session()
+		return
 	if is_race:
 		_spawn_ai(int(GameState.config["ai_count"]))
 	restart()
+
+## Weather lives in its own node: it owns the rain and the atmosphere, the session
+## only reads its wetness and pushes it into the car and the rivals.
+func _setup_weather() -> void:
+	weather = Weather.new()
+	weather.name = "Weather"
+	add_child(weather)
+	weather.setup(int(GameState.config.get("weather", 1)), cam)
+	weather.changed.connect(_on_weather_changed)
+	hud.set_weather(weather.label, weather.wetness)
+
+func _on_weather_changed(text: String, wetness: float) -> void:
+	hud.toast(text + "  -  GRIP CHANGING", hud.SILVER, 2.5)
+	# auto-dry call: a soaked track punishes slick tyres, so suggest the wet compound
+	if wetness > 0.6 and car.tyres.compound < Tyres.INTER:
+		hud.toast("WET TRACK  -  BOX FOR INTERMEDIATES", hud.RED, 3.0)
+
+func _setup_safety_car() -> void:
+	safety = SafetyCar.new()
+	safety.name = "SafetyCar"
+	add_child(safety)
+	safety.setup(track)
+
+## Neutralise the race: the safety car comes out, everyone is held to its pace.
+func _deploy_safety_car() -> void:
+	if safety_active or safety == null:
+		return
+	safety_active = true
+	_safety_t = safety_car_duration
+	var off: float = track.closest_offset(car.global_position)
+	safety.deploy(fposmod(off - 260.0, track.length))
+	safety.pace = safety_car_pace
+	car.neutral_limit = safety_car_pace
+	for ai in ais:
+		ai.pace_limit = safety_car_pace
+	hud.set_flag("SAFETY CAR", hud.GOLD)
+	hud.toast("SAFETY CAR DEPLOYED  -  HOLD POSITION", hud.GOLD, 3.0)
+
+func _retire_safety_car() -> void:
+	safety_active = false
+	safety.retire()
+	car.neutral_limit = 0.0
+	for ai in ais:
+		ai.pace_limit = 0.0
+	hud.set_flag("")
+	hud.toast("SAFETY CAR IN  -  GREEN FLAG", hud.GREEN, 2.5)
+
+func _update_safety_car(delta: float) -> void:
+	if not safety_active:
+		return
+	_safety_t -= delta
+	if _safety_t <= 0.0:
+		_retire_safety_car()
 
 ## Rivals: two cars per team (skipping the player's team), named drivers, skill from difficulty.
 func _spawn_ai(n: int) -> void:
@@ -119,23 +203,86 @@ func _grid_xform(slot: int) -> Dictionary:
 	var lat := -grid_lateral if slot % 2 == 0 else grid_lateral
 	return {"off": off, "lat": lat}
 
-## Puts everyone on the grid and starts the lights sequence.
-func _setup_grid() -> void:
-	var base_skill: float = GameState.AI_SKILL[int(GameState.config["difficulty"])]
+## Cars in qualifying order for a championship round (fastest first).
+func _championship_grid() -> Array:
+	var nodes: Array = []
+	for row in Championship.grid:
+		var driver := String((row as Dictionary).get("name", ""))
+		if driver == Championship.player_name:
+			nodes.append(car)
+			continue
+		for ai in ais:
+			if String(ai.get_meta("driver")) == driver:
+				nodes.append(ai)
+				break
+	return nodes
+
+## Default grid: the player in the middle of the field, rivals alternating around them.
+func _default_grid() -> Array:
+	var nodes: Array = []
 	var slots := ais.size() + 1
 	var player_slot := slots / 2
 	var s := 0
 	for i in slots:
-		var g := _grid_xform(i)
 		if i == player_slot:
+			nodes.append(car)
+		else:
+			nodes.append(ais[s])
+			s += 1
+	return nodes
+
+# ---------- qualifying ----------
+
+## One flying lap on an empty circuit. The lap time is handed to the championship
+## script, which turns it into a grid slot, then the race scene reloads.
+func _start_qualifying_session() -> void:
+	total_laps = 1
+	car.reset_to(track.get_xform(track.length - START_BACK))
+	car.controls_enabled = true
+	race_started = true
+	laps_done = 0
+	race_time = 0.0
+	lap_running = false
+	lap_time = 0.0
+	_last_off = track.closest_offset(car.global_position)
+	ghost.visible = false
+	hud.set_lap_count(1, 1)
+	_save_checkpoint()
+	GameState.set_state(GameState.State.QUALIFYING)
+	hud.toast("QUALIFYING  -  ONE FLYING LAP SETS YOUR GRID SLOT", hud.GOLD, 3.0)
+
+func _finish_qualifying(t: float) -> void:
+	car.controls_enabled = false
+	lap_running = false
+	hud.toast("QUALIFYING LAP   %s" % hud.fmt(t), hud.GOLD, 2.5)
+	await get_tree().create_timer(2.2).timeout
+	Championship.record_qualifying(t, track.ideal_time)
+	Championship.start_race()
+
+## Driver key used for championship points: the player's name, or the rival's name.
+func _entry_key(node) -> String:
+	if node == car:
+		return Championship.player_name
+	return String(node.get_meta("driver"))
+
+## Puts everyone on the grid and starts the lights sequence.
+func _setup_grid() -> void:
+	var base_skill: float = GameState.AI_SKILL[int(GameState.config["difficulty"])]
+	# championship rounds line up in qualifying order; everything else uses a mixed grid
+	var order: Array = _championship_grid() if is_championship and not Championship.grid.is_empty() \
+		else _default_grid()
+	for i in order.size():
+		var g := _grid_xform(i)
+		var node = order[i]
+		if node == car:
 			var xf: Transform3D = track.get_xform(g["off"])
 			xf.origin += xf.basis.x * float(g["lat"])
 			car.reset_to(xf)
 			continue
-		var ai: AnimatableBody3D = ais[s]
-		s += 1
+		var ai: AnimatableBody3D = node
 		ai.setup(track, ai.get_meta("team"), ai.get_meta("driver"), float(g["off"]) - track.length,
-			g["lat"], clampf(base_skill + randf_range(-skill_spread, skill_spread), 0.8, 1.02))
+			g["lat"], clampf(base_skill + randf_range(-skill_spread, skill_spread), 0.8, 1.03))
+		ai.apply_profile(GameState.AI_PROFILES[clampi(int(GameState.config["difficulty"]), 0, 2)])
 	race_started = false
 	_lights_t = 0.0
 	_go_delay = randf_range(0.2, 1.2)
@@ -287,6 +434,15 @@ func _physics_process(delta: float) -> void:
 	cam.kerb_shake = clampf(lat - (float(track.HALF_W) - 1.4), 0.0, 1.0) * clampf(absf(car.speed) / 30.0, 0.0, 1.0)
 	car.kerb = cam.kerb_shake
 
+	# weather: one wetness value feeds the player, the rivals and the HUD
+	if weather:
+		car.wetness = weather.wetness_value()
+		hud.set_weather(weather.label, car.wetness)
+		for ai in ais:
+			ai.wetness = car.wetness
+	hud.set_damage(car.damage)
+	_update_safety_car(delta)
+
 	if lap_running and not finished:
 		lap_time += delta
 		if not is_race:
@@ -308,10 +464,19 @@ func _physics_process(delta: float) -> void:
 	hud.set_boost(car.boost, car.boosting)
 	hud.set_drs(2 if car.drs_open else (1 if car.drs_available and car.drs_in_zone or car.drs_available else 0))
 	hud.set_tyres(car.tyres.wheels, car.tyres.short(), car.tyres.colour(), car.tyres.temp_state())
-	# minimap: one dot per car, the player highlighted
-	var dots: Array = [{"pos": car.global_position, "player": true}]
+	# minimap: the player gets a heading chevron, a halo and their position tag; rivals
+	# are smaller dots tinted with their team accent
+	var p_fwd: Vector3 = -car.global_transform.basis.z
+	var dots: Array = [{"pos": car.global_position, "player": true,
+		"dir": Vector2(p_fwd.x, p_fwd.z).normalized(), "rank": _player_pos}]
 	for ai in ais:
-		dots.append({"pos": ai.global_position, "player": false})
+		var a_fwd: Vector3 = -ai.global_transform.basis.z
+		var col := Color(0.95, 0.95, 0.98)
+		var tm = ai.get_meta("team", null)
+		if tm is Dictionary:
+			col = tm.get("color", col)
+		dots.append({"pos": ai.global_position, "player": false,
+			"dir": Vector2(a_fwd.x, a_fwd.z).normalized(), "color": col})
 	hud.set_minimap(dots)
 
 # ---------- pit lane and pit stops ----------
@@ -537,6 +702,20 @@ func _split(idx: int) -> void:
 	_save_checkpoint()
 
 func _cross_line() -> void:
+	# a completed lap can bring the safety car out for a few neutralised laps
+	if is_race and race_started and not finished and not safety_active and laps_done >= 1:
+		if randf() < safety_car_chance:
+			_deploy_safety_car()
+	# qualifying: a clean lap goes to the championship grid, anything else restarts it
+	if is_qualifying:
+		if not lap_running:
+			_start_lap()  # out lap: crossing the line starts the flying lap
+		elif sector == 2:
+			_finish_qualifying(lap_time)
+		else:
+			hud.toast("LAP INVALID  -  TRY AGAIN", hud.RED, 2.0)
+			_start_lap()
+		return
 	if lap_running and sector == 2:
 		_split(2)
 		_finish_lap()
@@ -621,8 +800,38 @@ func _finish_race() -> void:
 		String(GameState.DIFFICULTIES[clampi(int(GameState.config["difficulty"]), 0, 2)]), total_laps)
 	if not saved.is_empty() and int(saved["rank"]) > 0:
 		body += "\n%s board   P%d / 10" % ["CHAMPIONSHIP" if mode_key == "championship" else "RACE", int(saved["rank"])]
+	# championship: award round points and show where the season stands
+	var keys: Array = []
+	for e in order:
+		keys.append(_entry_key(e["node"]))
+	if is_championship and not _round_recorded:
+		_round_recorded = true
+		Championship.complete_round(keys)
+		body += "\nROUND POINTS\n"
+		for i in keys.size():
+			var pts: int = int(Championship.POINTS[i]) if i < Championship.POINTS.size() else 0
+			body += "P%-3d %-16s %2d pts\n" % [i + 1, String(keys[i]), pts]
+		body += "\nSeason   P%d   %d pts" % [Championship.player_position(), Championship.player_points()]
 	get_tree().paused = true
-	pause_menu.show_results("RACE COMPLETE", body)
+	pause_menu.show_results("RACE COMPLETE", body, is_championship)
+
+## Championship only: the results card's continue button opens the season standings.
+func _on_round_continue() -> void:
+	if standings != null:
+		return
+	standings = StandingsScreen.new()
+	add_child(standings)
+	standings.continue_pressed.connect(_on_next_round)
+	standings.close_pressed.connect(func() -> void:
+		get_tree().paused = false
+		GameState.go_to_menu())
+
+func _on_next_round() -> void:
+	get_tree().paused = false
+	if Championship.finished:
+		GameState.go_to_menu()
+		return
+	Championship.start_next_round()
 
 func _on_wall_hit(impact: float) -> void:
 	if not lap_running or finished:
