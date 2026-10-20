@@ -338,8 +338,8 @@ var _lights: Array[Panel] = []
 func set_race_info(pos: int, total: int, standings: String) -> void:
 	if _pos_label == null:
 		var root: Control = get_child(0)
-		_pos_label = _label(root, "", 44, Color.WHITE, Vector2(24, 228))
-		_standings = _label(root, "", 15, Color(0.9, 0.9, 0.92), Vector2(26, 284))
+		_pos_label = _label(root, "", 38, Color.WHITE, Vector2(24, 212))
+		_standings = _label(root, "", 14, Color(0.9, 0.9, 0.92), Vector2(26, 264))
 	_pos_label.text = "P%d / %d" % [pos, total] if total > 0 else ""
 	_standings.text = standings
 
@@ -562,12 +562,28 @@ var _flag_lbl: Label
 var _fps_lbl: Label
 
 func _build_conditions(root: Control) -> void:
-	var panel := _panel(root, Vector2(24, 232), Vector2(200, 84))
+	# Docked under the circuit minimap on the right side so it never collides with standings
+	var panel := Panel.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.02, 0.02, 0.03, 0.55)
+	sb.border_color = Color(1.0, 0.8, 0.35, 0.7)
+	sb.border_width_left = 3
+	sb.set_corner_radius_all(6)
+	panel.add_theme_stylebox_override("panel", sb)
+	panel.anchor_left = 1.0
+	panel.anchor_right = 1.0
+	panel.offset_left = -294
+	panel.offset_right = -24
+	panel.offset_top = 366
+	panel.offset_bottom = 438
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_label(panel, "CONDITIONS", 12, Color(0.7, 0.7, 0.75), Vector2(12, 6))
-	_weather_lbl = _label(panel, "DRY", 20, Color(0.85, 0.9, 1.0), Vector2(12, 22))
-	_damage_lbl = _label(panel, "DAMAGE  0%", 12, Color(0.7, 0.7, 0.75), Vector2(12, 50))
-	_damage_bar = _bar(panel, Vector2(12, 66), Vector2(176, 8), Color(1.0, 0.35, 0.25))
+	root.add_child(panel)
+
+	_label(panel, "CONDITIONS", 11, Color(0.7, 0.7, 0.75), Vector2(14, 8))
+	_weather_lbl = _label(panel, "DRY", 18, Color(0.85, 0.9, 1.0), Vector2(14, 26))
+
+	_damage_lbl = _label(panel, "DAMAGE  0%", 11, Color(0.7, 0.7, 0.75), Vector2(136, 8))
+	_damage_bar = _bar(panel, Vector2(136, 28), Vector2(120, 8), Color(1.0, 0.35, 0.25))
 
 	# race control flag strip, above the boost meter
 	_flag_lbl = Label.new()
