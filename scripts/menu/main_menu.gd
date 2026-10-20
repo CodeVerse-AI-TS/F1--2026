@@ -7,6 +7,7 @@ const SettingsPanel = preload("res://scripts/ui/settings_panel.gd")
 const SetupPanel = preload("res://scripts/ui/setup_panel.gd")
 const LeaderboardScreen = preload("res://scripts/ui/leaderboard_screen.gd")
 const Championship = preload("res://scripts/championship.gd")
+const Sfx = preload("res://scripts/sfx.gd")
 
 var _content: CenterContainer
 var _swatch: ColorRect
@@ -18,6 +19,11 @@ var _length_note: Label
 func _ready() -> void:
 	GameState.ensure_init()
 	GameState.set_state(GameState.State.MENU)
+	# ambient pad under the title screen; it lives on the Music bus so the slider works
+	var music: Node = Sfx.new()
+	music.name = "MenuMusic"
+	add_child(music)
+	music.set_loop("music", 0.45, "Music")
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_build_background()
 	var h := HBoxContainer.new()

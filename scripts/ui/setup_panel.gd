@@ -18,9 +18,9 @@ func _ready() -> void:
 	add_child(v)
 	v.add_child(UI.label("CAR SETUP", 30, UI.GOLD))
 	var s: Dictionary = GameState.config.get("setup", {})
-	v.add_child(UI.row("Aero balance", UI.slider(float(s.get("aero", 0.5)), _set.bind("aero"))))
-	v.add_child(UI.row("Suspension", UI.slider(float(s.get("susp", 0.5)), _set.bind("susp"))))
-	v.add_child(UI.row("Brake bias", UI.slider(float(s.get("bias", 0.5)), _set.bind("bias"))))
+	v.add_child(UI.row("Aero balance", UI.slider(float(s.get("aero", 0.5)), _set_value.bind("aero"))))
+	v.add_child(UI.row("Suspension", UI.slider(float(s.get("susp", 0.5)), _set_value.bind("susp"))))
+	v.add_child(UI.row("Brake bias", UI.slider(float(s.get("bias", 0.5)), _set_value.bind("bias"))))
 	_readout = UI.label("", 14, UI.TEXT_DIM)
 	_readout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_readout.custom_minimum_size = Vector2(560, 46)
@@ -30,7 +30,7 @@ func _ready() -> void:
 	v.add_child(UI.button("BACK", _close))
 	_refresh()
 
-func _set(value: float, key: String) -> void:
+func _set_value(value: float, key: String) -> void:
 	var setup: Dictionary = GameState.config.get("setup", {})
 	setup[key] = value
 	GameState.config["setup"] = setup
