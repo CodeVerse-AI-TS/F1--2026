@@ -9,6 +9,7 @@ const PURPLE := Color(0.8, 0.45, 1.0)
 const RED := Color(1.0, 0.3, 0.25)
 
 const MinimapScript = preload("res://scripts/ui/minimap.gd")
+const GameState = preload("res://scripts/game_state.gd")
 
 var _minimap: Control
 var _minimap_panel: Panel
@@ -121,6 +122,7 @@ func _ready() -> void:
 	root.add_child(_ring)
 	_build_race_widgets(root)
 	_build_tyre_panel(root)
+	_build_conditions(root)
 
 func _build_race_widgets(root: Control) -> void:
 	# DRS badge, left of the boost meter
@@ -472,6 +474,27 @@ func _process(delta: float) -> void:
 	if _toast_t > 0.0:
 		_toast_t -= delta
 		_toast.modulate.a = clampf(_toast_t / 0.4, 0.0, 1.0)
+	_update_fps()
+
+## Optional performance counter. Built on first use, toggled from Settings.
+func _update_fps() -> void:
+	if int(GameState.settings.get("show_fps", 0)) == 0:
+		if _fps_lbl:
+			_fps_lbl.visible = false
+		return
+	if _fps_lbl == null:
+		_fps_lbl = Label.new()
+		_fps_lbl.anchor_left = 1.0
+		_fps_lbl.anchor_right = 1.0
+		_fps_lbl.offset_left = -180
+		_fps_lbl.offset_right = -24
+		_fps_lbl.offset_top = 20
+		_fps_lbl.offset_bottom = 46
+		_fps_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_style(_fps_lbl, 18, Color(0.75, 1.0, 0.8))
+		add_child(_fps_lbl)
+	_fps_lbl.visible = true
+	_fps_lbl.text = "%d FPS" % Engine.get_frames_per_second()
 
 static func fmt(t: float) -> String:
 	if t >= 1.0e9:
@@ -518,3 +541,58 @@ func toast(text: String, col: Color, duration := 2.0) -> void:
 	_toast.add_theme_color_override("font_color", col)
 	_toast_t = duration
 	_toast.modulate.a = 1.0
+
+# ---------- conditions, damage and race flags ----------
+
+var _weather_lbl: Label
+var _damage_bar: ProgressBar
+var _damage_lbl: Label
+var _flag_lbl: Label
+var _fps_lbl: Label
+
+func _build_conditions(root: Control) -> void:
+	var panel := _panel(root, Vector2(24, 232), Vector2(200, 84))
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_label(panel, "CONDITIONS", 12, Color(0.7, 0.7, 0.75), Vector2(12, 6))
+	_weather_lbl = _label(panel, "DRY", 20, Color(0.85, 0.9, 1.0), Vector2(12, 22))
+	_damage_lbl = _label(panel, "DAMAGE  0%", 12, Color(0.7, 0.7, 0.75), Vector2(12, 50))
+	_damage_bar = _bar(panel, Vector2(12, 66), Vector2(176, 8), Color(1.0, 0.35, 0.25))
+
+	# race control flag strip, above the boost meter
+	_flag_lbl = Label.new()
+	_flag_lbl.anchor_left = 0.5
+	_flag_lbl.anchor_right = 0.5
+	_flag_lbl.anchor_top = 1.0
+	_flag_lbl.anchor_bottom = 1.0
+	_flag_lbl.offset_left = -300
+	_flag_lbl.offset_right = 300
+	_flag_lbl.offset_top = -130
+	_flag_lbl.offset_bottom = -96
+	_flag_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style(_flag_lbl, 22, GOLD)
+	_flag_lbl.modulate.a = 0.0
+	root.add_child(_flag_lbl)
+
+## Sky condition line. col tints the text (blue-ish when wet, amber when drying).
+func set_weather(text: String, wetness: float) -> void:
+	_weather_lbl.text = text
+	var col := Color(0.85, 0.9, 1.0).lerp(Color(0.5, 0.7, 1.0), clampf(wetness, 0.0, 1.0))
+	_weather_lbl.add_theme_color_override("font_color", col)
+
+## Bodywork damage 0..1: green under 35%, amber to 70%, red beyond.
+func set_damage(v: float) -> void:
+	_damage_bar.value = v
+	_damage_lbl.text = "DAMAGE  %d%%" % int(round(v * 100.0))
+	var col := Color(0.35, 1.0, 0.45)
+	if v >= 0.7:
+		col = RED
+	elif v >= 0.35:
+		col = Color(1.0, 0.75, 0.2)
+	_damage_lbl.add_theme_color_override("font_color", col)
+	_damage_bar.modulate = Color(1, 1, 1, 1) if v > 0.0 else Color(1, 1, 1, 0.45)
+
+## Race control message ("SAFETY CAR", "YELLOW FLAG"). "" clears it.
+func set_flag(text: String, col := Color(1.0, 0.8, 0.35)) -> void:
+	_flag_lbl.text = text
+	_flag_lbl.add_theme_color_override("font_color", col)
+	_flag_lbl.modulate.a = 1.0 if text != "" else 0.0
