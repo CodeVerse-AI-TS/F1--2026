@@ -147,14 +147,16 @@ func _build_body() -> void:
 	_cyl(0.07, 0.26, 1.1, Vector3(0, 0.6, 1.85), Vector3(90, 0, 0), _body, null, Vector3(1, 1, 0.8))
 	_box(Vector3(0.3, 0.32, 0.45), Vector3(0, 1.0, 0.0), _body)
 	_box(Vector3(0.2, 0.18, 0.04), Vector3(0, 1.05, -0.23), _dark)
-	_box(Vector3(0.12, 0.06, 0.12), Vector3(0, 1.2, -0.1), glow_mat)
+	# T-cam pod on the roll hoop: matte carbon housing with a dark glass lens
+	_box(Vector3(0.08, 0.05, 0.14), Vector3(0, 1.18, -0.08), _carbon)
+	_box(Vector3(0.03, 0.03, 0.02), Vector3(0, 1.18, -0.155), _dark)
 	# cockpit, driver, steering wheel, halo
 	_box(Vector3(0.5, 0.06, 0.7), Vector3(0, 0.68, -0.55), _dark)
 	var hs := SphereMesh.new()
 	hs.radius = 0.16
 	hs.height = 0.32
 	_part(hs, Vector3(0, 0.82, -0.45), _helmet)
-	_box(Vector3(0.25, 0.05, 0.05), Vector3(0, 0.85, -0.6), glow_mat)
+	_box(Vector3(0.18, 0.04, 0.03), Vector3(0, 0.84, -0.58), _dark)
 	_box(Vector3(0.26, 0.12, 0.03), Vector3(0, 0.72, -0.82), _carbon, Vector3(-30, 0, 0))
 	_box(Vector3(0.06, 0.25, 0.06), Vector3(0, 0.8, -1.0), _carbon)
 	var tor := TorusMesh.new()

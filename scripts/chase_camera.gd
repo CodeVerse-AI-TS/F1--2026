@@ -45,7 +45,7 @@ func set_view(v: int, instant := false) -> void:
 	view = clampi(v, 0, View.size() - 1)
 	_blend = 1.0 if instant else 0.0
 	_tv_index = -1
-	near = 0.04 if view == View.COCKPIT or view == View.HOOD else 0.1
+	near = 0.02 if (view == View.COCKPIT or view == View.HOOD) else 0.1
 
 func cycle() -> int:
 	set_view((view + 1) % View.size())
@@ -91,9 +91,11 @@ func _view_xform(v: int, xf: Transform3D, ratio: float) -> Transform3D:
 		View.FAR:
 			return _look(o - _dir * (far_distance + ratio * 1.5) + Vector3.UP * far_height, o + _dir * 8.0 + Vector3.UP * 0.6)
 		View.COCKPIT:
-			return Transform3D(xf.basis * Basis(Vector3.RIGHT, -0.05), xf * Vector3(0, 1.08, -0.2))
+			# true driver eye level inside the monocoque, looking forward through the halo
+			return Transform3D(xf.basis * Basis(Vector3.RIGHT, -0.04), xf * Vector3(0, 0.84, -0.52))
 		View.HOOD:
-			return Transform3D(xf.basis * Basis(Vector3.RIGHT, -0.09), xf * Vector3(0, 1.35, 0.25))
+			# TV broadcast roll-hoop T-cam: ahead of the intake pod, looking down over the nose
+			return Transform3D(xf.basis * Basis(Vector3.RIGHT, -0.08), xf * Vector3(0, 1.28, -0.16))
 		View.TV:
 			return _tv_xform(o)
 		View.TOP:
