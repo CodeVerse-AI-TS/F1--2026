@@ -14,6 +14,8 @@ const Championship = preload("res://scripts/championship.gd")
 const StandingsScreen = preload("res://scripts/ui/standings_screen.gd")
 const Weather = preload("res://scripts/weather.gd")
 const SafetyCar = preload("res://scripts/safety_car.gd")
+const Achievements = preload("res://scripts/achievements.gd")
+const Replay = preload("res://scripts/replay.gd")
 
 ## Safety car: chance per completed lap that the race is neutralised, and how long it stays out.
 @export var safety_car_chance := 0.22
@@ -42,6 +44,8 @@ var ais: Array = []
 ## Weather node (rain, sky and the grip it feeds the cars) and the safety car.
 var weather: Node3D
 var safety: Node3D
+## Records the player so the finish can be replayed from an orbiting camera.
+var replay: Node3D
 var safety_active := false
 var _safety_t := 0.0
 var race_started := false
@@ -52,6 +56,8 @@ var _player_pos := 1
 
 @export var restart_hold_time := 1.0
 @export var results_delay := 1.5
+## Seconds of finish replay filmed before the results card appears (0 disables it).
+@export var finish_replay_seconds := 7.0
 @export var drs_gap := 1.0            # seconds to the car ahead at detection to earn DRS
 @export var drs_from_lap := 1         # race laps completed before DRS is enabled
 @export var delta_bucket := 10.0      # metres between live-delta samples
@@ -61,6 +67,11 @@ var _player_pos := 1
 @onready var cam: Camera3D = $ChaseCamera
 @onready var ghost: Node3D = $Ghost
 @onready var hud = $HUD
+
+## Procedural audio bank: countdown, impacts, chimes, siren, squeal and rain.
+const Sfx = preload("res://scripts/sfx.gd")
+var sfx: Node
+var _last_beep := 0
 
 var lap_running := false
 var lap_time := 0.0
@@ -94,6 +105,9 @@ var standings: CanvasLayer
 
 func _ready() -> void:
 	GameState.ensure_init()
+	sfx = Sfx.new()
+	sfx.name = "Sfx"
+	add_child(sfx)
 	is_race = GameState.mode != GameState.Mode.TIME_TRIAL
 	is_championship = GameState.mode == GameState.Mode.CHAMPIONSHIP
 	is_qualifying = GameState.qualifying
@@ -111,6 +125,15 @@ func _ready() -> void:
 	hud.setup_minimap(track.data)
 	var team: Dictionary = GameState.team()
 	car.model.set_livery(team)
+	# circuit setup and driving aids chosen in the menu
+	# cinematic finish replay: records the player and films the closing seconds
+	replay = Replay.new()
+	replay.name = "Replay"
+	add_child(replay)
+	replay.set_livery(team)
+	car.apply_setup(GameState.config.get("setup", {}))
+	car.traction_assist = 1.0 if int(GameState.settings.get("traction", 1)) == 1 else 0.0
+	car.brake_assist = 1.0 if int(GameState.settings.get("brake_aid", 0)) == 1 else 0.0
 	car.wall_hit.connect(_on_wall_hit)
 	_setup_weather()
 	_setup_safety_car()
@@ -163,7 +186,9 @@ func _deploy_safety_car() -> void:
 	for ai in ais:
 		ai.pace_limit = safety_car_pace
 	hud.set_flag("SAFETY CAR", hud.GOLD)
+	sfx.play("siren", -7.0)
 	hud.toast("SAFETY CAR DEPLOYED  -  HOLD POSITION", hud.GOLD, 3.0)
+	sfx.play("siren", -4.0)
 
 func _retire_safety_car() -> void:
 	safety_active = false
@@ -440,8 +465,19 @@ func _physics_process(delta: float) -> void:
 		hud.set_weather(weather.label, car.wetness)
 		for ai in ais:
 			ai.wetness = car.wetness
+	# braking aid: hand the car the corner speed it is approaching so it can shed speed
+	if car.brake_assist > 0.0:
+		car.target_speed = track.speed_at(off + 45.0)
+	else:
+		car.target_speed = 0.0
 	hud.set_damage(car.damage)
+	# continuous audio: tyre scrub follows the car, rain follows the sky
+	sfx.set_loop("squeal", car.slip * 0.5)
+	sfx.set_loop("rain", car.wetness * 0.35)
 	_update_safety_car(delta)
+	# film material: the session keeps a short trace of the player for the finish replay
+	if is_race and race_started and not finished:
+		replay.record(race_time, car.global_transform)
 
 	if lap_running and not finished:
 		lap_time += delta
@@ -460,6 +496,9 @@ func _physics_process(delta: float) -> void:
 	var rpm_ratio := clampf((car.rpm - 4000.0) / 8800.0, 0.0, 1.0)
 	hud.set_lap(lap_time, lap_running)
 	hud.set_speed(GameState.speed_display(car.kmh()), car.gear, rpm_ratio)
+	# screen-edge streaks build from about 55% of top speed and flare on boost
+	var fx := clampf((absf(car.speed) / maxf(car.top_speed, 1.0) - 0.55) / 0.45, 0.0, 1.0)
+	hud.set_speed_fx(fx, car.boosting)
 	hud.set_rev_leds(rpm_ratio)
 	hud.set_boost(car.boost, car.boosting)
 	hud.set_drs(2 if car.drs_open else (1 if car.drs_available and car.drs_in_zone or car.drs_available else 0))
@@ -520,8 +559,10 @@ func _pit_update(delta: float, off: float) -> void:
 			if pit_timer <= 0.0:
 				car.pit_servicing = false
 				car.service(next_compound)
+				sfx.play("clunk", -4.0, 1.1)  # wheel guns off, car drops
 				_pit_stops += 1
 				pit_state = "done"
+				_unlock("pit_crew")
 				hud.toast("%s TYRES ON  -  GO GO GO" % Tyres.COMPOUNDS[next_compound]["name"], hud.GREEN, 2.0)
 				hud.set_pit_banner("")
 		"done":
@@ -576,6 +617,9 @@ func _race_update(delta: float) -> void:
 		# five red lights one per interval, then a random pause, then lights out
 		_lights_t += delta
 		var lit := mini(int(_lights_t / light_interval), 5)
+		if lit != _last_beep and lit < 5:
+			_last_beep = lit
+			sfx.play("beep", -6.0)
 		hud.set_start_lights(lit)
 		if _lights_t >= light_interval * 5.0 + _go_delay:
 			race_started = true
@@ -584,6 +628,8 @@ func _race_update(delta: float) -> void:
 			for ai in ais:
 				ai.racing = true
 			hud.set_start_lights(-1)
+			sfx.play("beep_go", -3.0)
+			_last_beep = -1
 			hud.toast("LIGHTS OUT AND AWAY WE GO", Color.WHITE, 2.0)
 	elif not finished:
 		race_time += delta
@@ -741,8 +787,21 @@ func _start_lap() -> void:
 	_last_bucket = -1
 	_save_checkpoint()
 
+## Local achievement: toasted once, the first time it is earned.
+func _unlock(id: String) -> void:
+	if Achievements.unlock(id):
+		hud.toast("ACHIEVEMENT  %s" % Achievements.title(id), hud.PURPLE, 3.0)
+
 func _finish_lap() -> void:
 	var t := lap_time
+	if t < 1.0e9:
+		_unlock("first_lap")
+		if t <= gold:
+			_unlock("gold_lap")
+		if penalties <= 0.01:
+			_unlock("clean_lap")
+		if car.wetness > 0.5:
+			_unlock("rain_driver")
 	var medal := "NO MEDAL"
 	var col: Color = Color.WHITE
 	if t <= gold:
@@ -770,6 +829,8 @@ func _finish_lap() -> void:
 		if not res.is_empty() and int(res["rank"]) > 0:
 			msg += "\nLEADERBOARD  P%d" % int(res["rank"])
 	hud.toast(msg, col, 4.0)
+	# a new best gets the brighter three-note chime, a normal lap the two-note one
+	sfx.play("best" if t <= best_lap + 0.0001 else "lap", -3.0)
 
 func _finish_race() -> void:
 	finished = true
@@ -777,9 +838,31 @@ func _finish_race() -> void:
 	car.controls_enabled = false
 	GameState.set_state(GameState.State.RESULTS)
 	hud.toast("CHEQUERED FLAG", Color.WHITE, 2.0)
+	sfx.play("finish", -2.0)
+	# film the closing seconds from an orbiting camera before the results card
+	if replay.has_data():
+		car.model.visible = false
+		replay.start(finish_replay_seconds)
+		await get_tree().create_timer(finish_replay_seconds).timeout
+		replay.stop()
+		car.model.visible = true
+		cam.make_current()
 	await get_tree().create_timer(results_delay).timeout
 	var body := "%s  -  %d laps\n\n" % [GameState.TRACKS[int(GameState.config["track"])]["name"], total_laps]
 	var order := _standings()
+	var finish_pos := 1
+	for i in order.size():
+		if (order[i] as Dictionary).get("player", false):
+			finish_pos = i + 1
+			break
+	if finish_pos == 1:
+		_unlock("first_win")
+		if is_championship:
+			_unlock("champion")
+	if finish_pos <= 3:
+		_unlock("podium")
+	if car.wetness > 0.5:
+		_unlock("rain_driver")
 	var L: float = track.length
 	for i in order.size():
 		var e: Dictionary = order[i]
@@ -840,4 +923,9 @@ func _on_wall_hit(impact: float) -> void:
 	lap_time += pen
 	race_time += pen
 	penalties += pen
+	# pitch falls with the hit so a light graze ticks and a big one thuds
+	sfx.play("impact", -2.0, clampf(1.25 - impact / 60.0, 0.7, 1.2))
 	hud.toast("BARRIER  +%.1fs" % pen, hud.RED, 1.2)
+	# harder hits sound deeper and louder, so the size of the mistake is audible
+	var loud := clampf(impact / 40.0, 0.0, 1.0)
+	sfx.play("impact", lerpf(-10.0, -1.0, loud), lerpf(1.25, 0.85, loud))
