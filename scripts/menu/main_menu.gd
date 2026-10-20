@@ -4,7 +4,9 @@ extends Control
 const UI = preload("res://scripts/ui/ui_kit.gd")
 const GameState = preload("res://scripts/game_state.gd")
 const SettingsPanel = preload("res://scripts/ui/settings_panel.gd")
+const SetupPanel = preload("res://scripts/ui/setup_panel.gd")
 const LeaderboardScreen = preload("res://scripts/ui/leaderboard_screen.gd")
+const Championship = preload("res://scripts/championship.gd")
 
 var _content: CenterContainer
 var _swatch: ColorRect
@@ -36,12 +38,10 @@ func _ready() -> void:
 	left.add_child(gap)
 	_first_button = UI.button("QUICK RACE", _show_setup.bind(GameState.Mode.QUICK_RACE))
 	left.add_child(_first_button)
-	var champ := UI.button("CHAMPIONSHIP   (soon)", func() -> void: pass)
-	champ.disabled = true
-	champ.tooltip_text = "Season mode arrives with the championship update."
-	left.add_child(champ)
+	left.add_child(UI.button("CHAMPIONSHIP", _show_championship))
 	left.add_child(UI.button("TIME TRIAL", _show_setup.bind(GameState.Mode.TIME_TRIAL)))
 	left.add_child(UI.button("LEADERBOARD", _show_leaderboard))
+	left.add_child(UI.button("CAR SETUP", _show_car_setup))
 	left.add_child(UI.button("SETTINGS", _show_settings))
 	left.add_child(UI.button("QUIT", func() -> void: get_tree().quit()))
 	_content = CenterContainer.new()
@@ -129,6 +129,8 @@ func _show_setup(mode: int) -> void:
 		v.add_child(UI.row("Race length", UI.option(GameState.RACE_LENGTHS, int(cfg.get("length", 0)), _pick_length)))
 		v.add_child(UI.row("Difficulty", UI.option(GameState.DIFFICULTIES, int(cfg["difficulty"]),
 			func(i: int) -> void: cfg["difficulty"] = i)))
+		v.add_child(UI.row("Weather", UI.option(GameState.WEATHER_NAMES, int(cfg.get("weather", 1)),
+			func(i: int) -> void: cfg["weather"] = i)))
 		var ai_idx := maxi(GameState.AI_OPTIONS.find(int(cfg["ai_count"])), 0)
 		v.add_child(UI.row("AI opponents", UI.option(GameState.AI_OPTIONS, ai_idx,
 			func(i: int) -> void: cfg["ai_count"] = GameState.AI_OPTIONS[i])))
@@ -179,6 +181,40 @@ func _show_leaderboard() -> void:
 	var b := LeaderboardScreen.new()
 	b.closed.connect(_clear)
 	_content.add_child(b)
+
+## Championship hub: resume a saved season, or set up a new five-round season.
+func _show_championship() -> void:
+	var in_progress := Championship.load_season() and not Championship.finished
+	var v := _panel("CHAMPIONSHIP")
+	var info := "Five rounds, one circuit each. Every weekend runs qualifying, then the race. Points: 25-18-15-12-10-8-6-4-2-1."
+	if in_progress:
+		info = "Season in progress: %s at %s.\nYour position: P%d with %d points." % [
+			Championship.round_label(), String(Championship.round_track()["name"]),
+			Championship.player_position(), Championship.player_points()]
+	var l := UI.label(info, 16, UI.TEXT_DIM)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(500, 0)
+	v.add_child(l)
+	if in_progress:
+		v.add_child(UI.button("NEXT ROUND  -  QUALIFYING", func() -> void: Championship.start_qualifying(), 22))
+	v.add_child(UI.label("NEW SEASON", 22, UI.GOLD))
+	v.add_child(UI.row("Driver name", _name_field()))
+	var team_names: Array = []
+	for t in GameState.TEAMS:
+		team_names.append(t["name"])
+	_swatch = ColorRect.new()
+	_swatch.custom_minimum_size = Vector2(38, 38)
+	var team_row := UI.row("Team", UI.option(team_names, int(GameState.config["team"]), _pick_team))
+	team_row.add_child(_swatch)
+	v.add_child(team_row)
+	_pick_team(int(GameState.config["team"]))
+	v.add_child(UI.label("Season progress saves to user://championship.json", 13, Color(1, 1, 1, 0.45)))
+	v.add_child(UI.button("START SEASON  -  QUALIFYING", _start_new_season, 24))
+
+func _start_new_season() -> void:
+	Championship.new_season(String(GameState.config.get("player_name", "DRIVER")),
+		int(GameState.config["team"]))
+	Championship.start_qualifying()
 
 ## Track choice: updates the preview drawing and the length / corners / difficulty / best lap line.
 func _pick_track(i: int) -> void:
@@ -233,5 +269,11 @@ class TrackPreview extends Control:
 func _show_settings() -> void:
 	_clear()
 	var s := SettingsPanel.new()
+	s.closed.connect(_clear)
+	_content.add_child(s)
+
+func _show_car_setup() -> void:
+	_clear()
+	var s := SetupPanel.new()
 	s.closed.connect(_clear)
 	_content.add_child(s)
