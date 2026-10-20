@@ -63,6 +63,8 @@ var _land_t := 0.0
 const GEAR_TOPS := [0.2, 0.32, 0.44, 0.56, 0.68, 0.8, 0.9, 1.0]
 
 var speed := 0.0
+## 0..1 tyre scrub, drives the squeal audio layer and nothing else.
+var slip := 0.0
 var steer := 0.0
 var throttle_in := 0.0
 var brake_in := 0.0
@@ -144,6 +146,12 @@ func _physics_process(delta: float) -> void:
 		1.0 if boosting else 0.0, kerb, wetness)
 	# normalised 0..1 grip: 1 = a fresh, warm soft tyre on a dry track
 	var grip := clampf(tyres.grip_multiplier(wetness) / 1.06, 0.15, 1.0) * setup_grip
+	# tyre scrub for the squeal layer: steering above a walking pace on worn or wet rubber
+	slip = clampf((absf(steer) - 0.25) * clampf(absf(speed) / 30.0, 0.0, 1.0) * (2.0 - grip), 0.0, 1.0)
+	# 0..1 how hard the tyres are being scrubbed sideways, read by the squeal layer.
+	# Only a real slide counts: full lock at walking pace must stay silent.
+	slip = clampf((absf(steer) * clampf(absf(speed) / 45.0, 0.0, 1.0) - 0.35) / 0.65, 0.0, 1.0)
+	slip *= clampf((1.15 - grip) * 2.2, 0.0, 1.0)
 	# a bent car loses aero and turns in worse, so damage costs lap time until repaired
 	grip *= lerpf(1.0, 0.84, damage)
 	# fuel load: heavier at the start of a stint, so acceleration and top speed grow as it burns
@@ -171,8 +179,8 @@ func _physics_process(delta: float) -> void:
 			accel += drs_accel_bonus * ratio
 		accel *= lerpf(0.72, 1.0, grip)  # a worn or cold tyre spins up instead of pushing
 		# traction control: trims torque instead of lighting the rear tyres up
-		if traction > 0.0 and grip < 0.95:
-			accel *= lerpf(1.0, lerpf(0.78, 1.0, grip), traction)
+		if traction_assist > 0.0 and grip < 0.95:
+			accel *= lerpf(1.0, lerpf(0.78, 1.0, grip), traction_assist)
 		accel *= lerpf(0.97, 1.0, load_factor)
 		if speed < cap:
 			speed = minf(speed + accel * delta, cap)
