@@ -5,6 +5,8 @@ extends CanvasLayer
 signal resume_pressed
 signal restart_pressed
 signal camera_pressed
+## Championship rounds: the results card offers a button through to the standings.
+signal continue_pressed
 
 const UI = preload("res://scripts/ui/ui_kit.gd")
 const GameState = preload("res://scripts/game_state.gd")
@@ -15,6 +17,8 @@ var _panel: PanelContainer
 var _title: Label
 var _body: Label
 var _resume: Button
+var _restart: Button
+var _continue: Button
 var _camera: Button
 var _settings_btn: Button
 var _settings: Control
@@ -42,7 +46,10 @@ func _ready() -> void:
 	v.add_child(_body)
 	_resume = UI.button("RESUME", _on_resume)
 	v.add_child(_resume)
-	v.add_child(UI.button("RESTART RACE", func() -> void: _close(); restart_pressed.emit()))
+	_restart = UI.button("RESTART RACE", func() -> void: _close(); restart_pressed.emit())
+	v.add_child(_restart)
+	_continue = UI.button("STANDINGS  >", _on_continue)
+	v.add_child(_continue)
 	_camera = UI.button("CHANGE CAMERA", func() -> void: camera_pressed.emit())
 	v.add_child(_camera)
 	_settings_btn = UI.button("SETTINGS", _open_settings)
@@ -61,7 +68,8 @@ func open() -> void:
 	visible = true
 	_resume.grab_focus()
 
-func show_results(title: String, body: String) -> void:
+## allow_continue adds the standings button (championship rounds only).
+func show_results(title: String, body: String, allow_continue := false) -> void:
 	_results_mode = true
 	_title.text = title
 	_body.text = body
@@ -69,8 +77,14 @@ func show_results(title: String, body: String) -> void:
 	_resume.visible = false
 	_camera.visible = false
 	_settings_btn.visible = false
+	_restart.visible = not allow_continue
+	_continue.visible = allow_continue
 	_show_main()
 	visible = true
+
+func _on_continue() -> void:
+	visible = false
+	continue_pressed.emit()
 
 func _show_main() -> void:
 	if _settings:

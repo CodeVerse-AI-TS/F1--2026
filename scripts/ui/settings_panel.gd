@@ -21,6 +21,9 @@ func _ready() -> void:
 	v.add_child(UI.row("Graphics quality", UI.option(GameState.QUALITY_NAMES, int(s["quality"]), _set_i.bind("quality"))))
 	v.add_child(UI.row("Default camera", UI.option(GameState.CAMERA_NAMES, int(s["camera"]), _set_i.bind("camera"))))
 	v.add_child(UI.row("Speed units", UI.option(["km/h", "mph"], int(s["units"]), _set_i.bind("units"))))
+	v.add_child(UI.row("FPS counter", UI.option(["Off", "On"], int(s.get("show_fps", 0)), _set_i.bind("show_fps"))))
+	v.add_child(UI.row("Traction control", UI.option(["Off", "On"], int(s.get("traction", 1)), _set_i.bind("traction"))))
+	v.add_child(UI.row("Braking assist", UI.option(["Off", "On"], int(s.get("brake_aid", 0)), _set_i.bind("brake_aid"))))
 	v.add_child(UI.label("CONTROLS", 22, UI.GOLD))
 	var grid := GridContainer.new()
 	grid.columns = 2
