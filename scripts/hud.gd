@@ -9,6 +9,7 @@ const PURPLE := Color(0.8, 0.45, 1.0)
 const RED := Color(1.0, 0.3, 0.25)
 
 const MinimapScript = preload("res://scripts/ui/minimap.gd")
+const SpeedFxScript = preload("res://scripts/ui/speed_fx.gd")
 const GameState = preload("res://scripts/game_state.gd")
 
 var _minimap: Control
@@ -35,11 +36,16 @@ var _drs_label: Label
 var _leds: Array[ColorRect] = []
 var _delta: Label
 var _gap: Label
+## Screen-edge streaks: added first so they sit behind every panel.
+var _speed_fx: Control
 
 const DRS_COLORS := [Color(0.25, 0.25, 0.28, 0.85), Color(1.0, 0.65, 0.1, 0.95), Color(0.2, 0.9, 0.3, 0.95)]
 const LED_COUNT := 15
 
 func _ready() -> void:
+	# speed streaks first, so every panel draws on top of them
+	_speed_fx = SpeedFxScript.new()
+	add_child(_speed_fx)
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -506,6 +512,11 @@ func set_speed(kmh: float, gear: int, rpm_ratio: float) -> void:
 	_speed.text = str(int(round(kmh)))
 	_gear.text = str(gear)
 	_rpm.value = rpm_ratio
+
+## Speed streaks: speed_fraction is 0..1 of the car's top speed.
+func set_speed_fx(speed_fraction: float, boosting: bool) -> void:
+	if _speed_fx and _speed_fx.has_method("set_speed"):
+		_speed_fx.set_speed(speed_fraction, boosting)
 
 func set_boost(v: float, active: bool) -> void:
 	_boost.value = v
