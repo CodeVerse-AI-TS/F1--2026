@@ -150,6 +150,32 @@ const TRACKS := [
 		],
 		"pit": {"entry": 0.95, "exit": 0.05, "box": 0.982},
 		"banking": 0.5,
+		# underpass between the hairpin exit and the run down to 130R
+		"tunnels": [{"start_m": 1500.0, "end_m": 1760.0, "height": 6.4, "wall_extra": 1.0}],
+	},
+	{
+		"id": "monaco", "name": "Monte Carlo Street Circuit", "theme": "street",
+		"half_w": 7.5, "difficulty": 3, "corners": 19, "length_km": 3.337, "banking": 0.0,
+		"desc": "Harbour walls with no run-off: Sainte Devote, the climb to Casino, Mirabeau, the Loews hairpin, the Portier tunnel, the seafront, Tabac and the Nouvelle Chicane.",
+		"points": [
+			Vector3(0, 0, 0), Vector3(0, 0, -120), Vector3(-8, 0, -200),
+			Vector3(-40, 1, -250), Vector3(-110, 3, -270),
+			Vector3(-170, 6, -240), Vector3(-200, 9, -170),
+			Vector3(-190, 11, -110), Vector3(-150, 12, -80), Vector3(-110, 12, -100),
+			Vector3(-90, 11, -160),
+			Vector3(-130, 10, -210), Vector3(-190, 9, -230), Vector3(-240, 8, -200),
+			Vector3(-250, 7, -140),
+			Vector3(-270, 6, -90), Vector3(-310, 5, -40),
+			Vector3(-340, 4, 30), Vector3(-320, 3, 100), Vector3(-250, 2, 140),
+			Vector3(-160, 1, 150), Vector3(-90, 0, 120),
+			Vector3(-70, 0, 60), Vector3(-110, 0, 20), Vector3(-170, 0, 0),
+			Vector3(-200, 0, -50), Vector3(-160, 0, -90), Vector3(-90, 0, -70),
+			Vector3(-40, 0, -30),
+		],
+		"drs": [{"detect_m": 3100.0, "start_m": 3160.0, "end_m": 3300.0}],
+		"pit": {"entry": 0.92, "exit": 0.05, "box": 0.972},
+		# the famous Portier tunnel: the run out of the hairpin, through the rock, to the seafront
+		"tunnels": [{"start_m": 1420.0, "end_m": 1880.0, "height": 6.8, "wall_extra": 1.2}],
 	},
 ]
 ## Per-theme sky, sun and scenery recipe used by scripts/track.gd.

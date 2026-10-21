@@ -474,6 +474,7 @@ func _physics_process(delta: float) -> void:
 	# continuous audio: tyre scrub follows the car, rain follows the sky
 	sfx.set_loop("squeal", car.slip * 0.5)
 	sfx.set_loop("rain", car.wetness * 0.35)
+	_update_tunnel(off)
 	_update_safety_car(delta)
 	# film material: the session keeps a short trace of the player for the finish replay
 	if is_race and race_started and not finished:

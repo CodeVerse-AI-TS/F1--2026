@@ -36,6 +36,9 @@ var _bank_angle := PackedFloat32Array()
 var drs_zones: Array[Dictionary] = []
 ## Pit lane: entry/exit offsets and the pit box where the crew works.
 var pit := {"entry": 0.0, "exit": 0.0, "box": 0.0, "side": -1.0, "offset": 8.0}
+## Tunnel sections as {"start", "end", "height", "half"}: offsets in metres.
+## Filled by _plan_tunnels and read by the session (lighting, reverb) and the car.
+var tunnels: Array[Dictionary] = []
 ## Side the pit lane is on (-1 = left of travel) and how long the merge gaps are (metres).
 var pit_side := -1.0
 var pit_merge := 48.0
@@ -67,12 +70,14 @@ func _ready() -> void:
 	_body = StaticBody3D.new()
 	add_child(_body)
 	_plan_pit()
+	_plan_tunnels()
 	_build_road()
 	_build_walls()
 	_build_kerbs_and_lines()
 	_build_start()
 	_build_drs()
 	_build_pit_lane()
+	_build_tunnels()
 	_build_world()
 	_build_speed_profile()
 
@@ -441,6 +446,196 @@ func _plan_pit() -> void:
 ## True when off lies inside the forward span a -> b (wrapping over the line).
 func _in_span(off: float, a: float, b: float) -> bool:
 	return fposmod(off - a, length) <= fposmod(b - a, length)
+
+# ---------- tunnels ----------
+
+## Tunnel spans declared in the track data as real metres (start_m / end_m), so a
+## designer places the Portier tunnel by distance, not by guessed lap fraction.
+func _plan_tunnels() -> void:
+	tunnels.clear()
+	for t in data.get("tunnels", []):
+		var tt: Dictionary = t
+		var a := fposmod(float(tt.get("start_m", 0.0)), maxf(length, 1.0))
+		var b := fposmod(float(tt.get("end_m", 0.0)), maxf(length, 1.0))
+		if absf(b - a) < 1.0:
+			continue
+		tunnels.append({
+			"start": a, "end": b,
+			"height": float(tt.get("height", 6.8)),
+			"wall_ext": float(tt.get("wall_extra", 1.2)),
+		})
+
+## True when this offset is under a tunnel roof (used for lighting and reverb).
+func in_tunnel(off: float) -> bool:
+	for t in tunnels:
+		if _in_span(off, float(t["start"]), float(t["end"])):
+			return true
+	return false
+
+## 0..1 how deep into a tunnel this offset is, ramped over `fade` metres at each
+## portal. Drives the ambient darkening, the HUD whiteout at the exit and the echo.
+func tunnel_light(off: float, fade := 14.0) -> float:
+	for t in tunnels:
+		var s := float(t["start"])
+		var e := float(t["end"])
+		if not _in_span(off, s, e):
+			continue
+		var into := fposmod(off - s, length)
+		var to_exit := fposmod(e - off, length)
+		return clampf(minf(into, to_exit) / maxf(fade, 0.001), 0.0, 1.0)
+	return 0.0
+
+## Metres travelled since leaving the last tunnel exit (large when never in one).
+## Used for the daylight whiteout that blooms for a second after the portal.
+func since_tunnel_exit(off: float) -> float:
+	var best := 1.0e6
+	for t in tunnels:
+		var e := float(t["end"])
+		var d := fposmod(off - e, length)
+		if d < best:
+			best = d
+	return best
+
+func _build_tunnels() -> void:
+	if tunnels.is_empty():
+		return
+	var shell_mat := StandardMaterial3D.new()
+	shell_mat.albedo_color = Color(0.46, 0.45, 0.43)
+	shell_mat.roughness = 0.85
+	var ceil_mat := StandardMaterial3D.new()
+	ceil_mat.albedo_color = Color(0.62, 0.61, 0.58)
+	ceil_mat.roughness = 0.7
+	var lamp_mat := StandardMaterial3D.new()
+	lamp_mat.albedo_color = Color(1.0, 0.95, 0.85)
+	lamp_mat.emission_enabled = true
+	lamp_mat.emission = Color(1.0, 0.95, 0.85)
+	lamp_mat.emission_energy_multiplier = 6.0
+	lamp_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	for t in tunnels:
+		_vault_one(t, shell_mat, ceil_mat, lamp_mat)
+
+## One tunnel: a chain of arched ribs swept along the spline. Each segment is a ring of
+## quads joined to the next, so the vault is closed and the collision mesh watertight.
+func _vault_one(t: Dictionary, shell_mat: Material, ceil_mat: Material, lamp_mat: Material) -> void:
+	var start: float = float(t["start"])
+	var end: float = float(t["end"])
+	var span := fposmod(end - start, length)
+	var height: float = float(t["height"])
+	var ext: float = float(t["wall_ext"]) + WALL_T
+	var ribs := maxi(int(span / 4.0), 8)
+	var arcs := 12                       # quads across the arch
+	var inner := half_w + ext            # half width of the tunnel bore
+	var spring := WALL_H + 0.35          # where the vertical wall becomes the arch
+	var rise := maxf(height - spring, 1.2)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var prev := PackedVector3Array()
+	for i in ribs + 1:
+		var off := start + span * float(i) / float(ribs)
+		var ring := PackedVector3Array()
+		var xf := get_xform(off)
+		for k in arcs + 1:
+			var u := float(k) / float(arcs)             # 0 left wall .. 1 right wall
+			var a := PI * u
+			var x := -cos(a) * inner
+			var y := spring + sin(a) * rise
+			ring.append(xf * Vector3(x, y, 0.0))
+		if i > 0:
+			for k in arcs:
+				var a0: Vector3 = prev[k]
+				var a1: Vector3 = prev[k + 1]
+				var b1: Vector3 = ring[k + 1]
+				var b0: Vector3 = ring[k]
+				var centre: Vector3 = (a0 + a1 + b0 + b1) * 0.25
+				var cxf := get_xform(off - span / float(ribs) * 0.5)
+				var n := (centre - Vector3(cxf.origin.x, centre.y, cxf.origin.z)).normalized()
+				# the ceiling normal must face DOWN into the bore, backfaces are solid
+				if n.y > 0.0:
+					n = -n
+				_quad(st, [a0, b0, b1, a1], [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)], n)
+		prev = ring
+	var mesh := st.commit()
+	_add_mesh(mesh, shell_mat)
+	# solid collision: the same shell, double sided so a car can never slip through a seam
+	_add_collision(mesh, true)
+	# structural side walls, floor to the arch springing line, both sides
+	for s in [-1.0, 1.0]:
+		var ws := SurfaceTool.new()
+		ws.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var prev_w := PackedVector3Array()
+		for i in ribs + 1:
+			var off := start + span * float(i) / float(ribs)
+			var xf := get_xform(off)
+			var here := PackedVector3Array([
+				xf * Vector3(s * inner, 0.0, 0.0),
+				xf * Vector3(s * inner, spring, 0.0),
+			])
+			if i > 0:
+				var n: Vector3 = (xf.basis.x * -s).normalized()
+				_quad(ws, [prev_w[0], here[0], here[1], prev_w[1]],
+					[Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)], n)
+			prev_w = here
+		var wmesh := ws.commit()
+		_add_mesh(wmesh, shell_mat)
+		_add_collision(wmesh, true)
+	_build_tunnel_portals(t, start, end, inner, height, arc_rise(spring, rise), ceil_mat)
+	_build_tunnel_lights(t, start, end, inner, spring, rise, lamp_mat)
+
+func arc_rise(spring: float, rise: float) -> float:
+	return spring + rise
+
+## Concrete lintels and hazard chevrons at both ends, plus LED warning boards.
+func _build_tunnel_portals(t: Dictionary, start: float, end: float, inner: float,
+		height: float, crown: float, mat: Material) -> void:
+	var hazard := _stripe_mat(Color(1.0, 0.78, 0.1), Color(0.05, 0.05, 0.05), 0.6)
+	for off in [start, end]:
+		var xf := get_xform(off)
+		var root := Node3D.new()
+		add_child(root)
+		root.global_transform = xf
+		# lintel across the mouth, sitting on the crown of the arch
+		_box(root, Vector3(inner * 2.0 + 1.6, 0.9, 1.2), Vector3(0, crown + 0.45, 0), mat)
+		_box(root, Vector3(inner * 2.0 + 1.6, 0.22, 1.3), Vector3(0, crown - 0.05, 0), hazard)
+		# hazard-faced portal jambs
+		for s in [-1.0, 1.0]:
+			_box(root, Vector3(0.9, crown, 1.2), Vector3(s * (inner + 0.45), crown * 0.5, 0), mat)
+			_box(root, Vector3(0.25, crown, 1.25), Vector3(s * inner, crown * 0.5, 0), hazard)
+		var sign_l := Label3D.new()
+		sign_l.text = "TUNNEL - CAUTION"
+		sign_l.font_size = 110
+		sign_l.pixel_size = 0.012
+		sign_l.modulate = Color(1.0, 0.72, 0.15)
+		sign_l.outline_size = 14
+		sign_l.shaded = false
+		add_child(sign_l)
+		sign_l.global_transform = xf.translated_local(Vector3(0, crown + 0.55, 0.7))
+
+## Fluorescent tube fixtures every 12 m: an emissive strip plus a soft omni light.
+func _build_tunnel_lights(t: Dictionary, start: float, end: float, inner: float,
+		spring: float, rise: float, lamp_mat: Material) -> void:
+	var span := fposmod(end - start, length)
+	var lamp_root := Node3D.new()
+	lamp_root.name = "TunnelLights"
+	add_child(lamp_root)
+	var count_l := maxi(int(span / 12.0), 1)
+	for i in count_l:
+		var off := start + (float(i) + 0.5) * (span / float(count_l))
+		var xf := get_xform(off)
+		var tube := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(minf(inner * 1.1, 9.0), 0.1, 0.55)
+		tube.mesh = bm
+		tube.material_override = lamp_mat
+		tube.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		lamp_root.add_child(tube)
+		tube.global_transform = xf.translated_local(Vector3(0.0, spring + rise - 0.55, 0.0))
+		var l := OmniLight3D.new()
+		l.light_color = Color(1.0, 0.95, 0.85)
+		l.light_energy = 4.2
+		l.omni_range = 16.0
+		l.shadow_enabled = false
+		lamp_root.add_child(l)
+		l.global_position = xf.translated_local(Vector3(0.0, spring + rise - 1.1, 0.0)).origin
 
 func _build_pit_lane() -> void:
 	var half := 3.4                     # pit lane half width
