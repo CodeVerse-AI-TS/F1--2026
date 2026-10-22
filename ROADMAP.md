@@ -4,6 +4,25 @@ This roadmap tracks the ongoing development of **Apex Rush**. Community contribu
 
 ---
 
+## ✅ Completed in v1.3.0 (Grand Prix & Immersion Overhaul)
+
+- [x] **Authentic Grand Prix Circuits & Dynamic Banking**:
+  - Monte Carlo Street Circuit with Casino climb, Portier rock tunnel, descent gallery, and flyover crossing over the start straight.
+  - Spa-Francorchamps with 40m elevation climb through Eau Rouge and Raidillon.
+  - Autodromo Nazionale Monza featuring Rettifilo, Curva Grande, Ascari, and Parabolica.
+  - Silverstone Circuit with Maggotts-Becketts-Chapel and Hangar Straight underpass.
+  - Suzuka Circuit with iconic figure-eight crossover.
+- [x] **Procedural 3D Tunnel Architecture & Viaducts**: Arched vault ceilings, overhead fluorescent tube lights, structural bridge piers, and realistic concrete soffits.
+- [x] **Interactive Steering Wheel LCD Multi-Function Display (MFD)**: Cockpit digital gear counter, live speedometer, and 5-stage progressive shift light LEDs.
+- [x] **Brake Countdown Distance Boards**: Procedural 150m, 100m, and 50m foam marker boards erected along barriers before heavy braking zones.
+- [x] **Procedural Team Radio & Pit-Wall Audio**: Walkie-talkie chirp synthesis and broadcast team radio subtitle banners for safety cars and race control.
+- [x] **Advanced Audio Synthesis**: Ignition-cut pneumatic exhaust pops on upshifts, kerb rumble vibration audio, and multi-tap concrete tunnel echo.
+- [x] **Visual FX Expansion**: Tyre lock-up smoke particle emitters and refractive exhaust heat shimmer during throttle application.
+- [x] **Post-Race Podium & Championship Trophies**: 3-tier podium celebration screen with Gold, Silver, and Bronze trophies and FIA points classification.
+- [x] **Visibility & Tonemapping Overhaul**: ACES tonemapper with restrained exposure, glow threshold raised to 1.15 to prevent tarmac bloom, and elevated Chase Camera forward sightlines.
+
+---
+
 ## ✅ Completed in v1.2.0
 
 - [x] **Full Championship Season**: 5-round calendar with qualifying sessions, official F1 points scoring (25-18-15-12-10-8-6-4-2-1), and persistent driver/constructor standings.
