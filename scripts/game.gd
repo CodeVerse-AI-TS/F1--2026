@@ -73,6 +73,13 @@ const Sfx = preload("res://scripts/sfx.gd")
 var sfx: Node
 var _last_beep := 0
 
+## Tunnel state: 0 = daylight, 1 = fully inside. Drives the sun dimming, the
+## whiteout flash on exit and the acoustic echo on the engine and tyre scrub.
+var _tunnel := 0.0
+var _whiteout := 0.0
+var _sun: DirectionalLight3D
+var _sun_base := 1.0
+
 var lap_running := false
 var lap_time := 0.0
 var sector := 0
@@ -205,6 +212,32 @@ func _update_safety_car(delta: float) -> void:
 	_safety_t -= delta
 	if _safety_t <= 0.0:
 		_retire_safety_car()
+
+## Tunnel light: the sun dims to a fraction under the vault, the sky ambient drops,
+## and bursting out of the portal fires a short whiteout the camera viewport fades down.
+## track.tunnel_light() gives a 0..1 ramp over the portal threshold so nothing snaps.
+func _update_tunnel(off: float) -> void:
+	var target: float = track.tunnel_light(off)
+	_tunnel = move_toward(_tunnel, target, 0.9 * get_physics_process_delta_time())
+	if _sun == null:
+		var look := get_node_or_null("Look")
+		if look:
+			_sun = look.get_node_or_null("Sun") as DirectionalLight3D
+			if _sun:
+				_sun_base = _sun.light_energy
+	if _sun:
+		_sun.light_energy = lerpf(_sun_base, _sun_base * 0.18, _tunnel)
+	# exit flash: highest rate of leaving the tunnel, then decays back to clear
+	if target < _tunnel - 0.0001 and _tunnel > 0.35:
+		_whiteout = 1.0
+	if _whiteout > 0.0:
+		_whiteout = maxf(_whiteout - get_physics_process_delta_time() * 1.8, 0.0)
+		hud.set_whiteout(_whiteout)
+	# acoustic echo: the engine and the tyre scrub pick up the tunnel slap-back
+	if sfx and sfx.has_method("set_tunnel"):
+		sfx.set_tunnel(_tunnel, absf(car.speed) / 60.0)
+	if cam and cam.has_method("set_tunnel"):
+		cam.set_tunnel(_tunnel)
 
 ## Rivals: two cars per team (skipping the player's team), named drivers, skill from difficulty.
 func _spawn_ai(n: int) -> void:
