@@ -9,7 +9,14 @@ const GameState = preload("res://scripts/game_state.gd")
 const BASE_HALF := 7.5
 const WALL_H := 1.1
 const WALL_T := 0.7
+## How far the barrier skirt reaches below the road surface it stands on. Keeping this
+## relative to the track (not to sea level) is what stops an elevated climb from
+## growing a 12 m concrete slab under its walls.
+const WALL_SINK := 1.3
 const STEP := 2.0
+## Catmull-Rom handles are capped at a third of the shorter neighbouring chord, so an
+## uneven control spacing can never make the spline overshoot into a loop or cusp.
+const HANDLE_CAP := 0.34
 
 ## Fallback centre line (the Monte Carlo street circuit) when no data is supplied.
 const POINTS := [
@@ -78,6 +85,7 @@ func _ready() -> void:
 	_build_drs()
 	_build_pit_lane()
 	_build_tunnels()
+	_build_deckwork()
 	_build_world()
 	_build_speed_profile()
 
@@ -116,6 +124,11 @@ func _build_curve() -> void:
 		var prev: Vector3 = src[(i - 1 + n) % n]
 		var nxt: Vector3 = src[(i + 1) % n]
 		var h := (nxt - prev) / 5.0
+		# keep the tangent direction but shorten it to fit the tightest neighbouring
+		# chord, so a 100 m straight next to a 20 m corner link stays a smooth ribbon
+		if h.length() > 0.0001:
+			var cap := minf((p - prev).length(), (nxt - p).length()) * HANDLE_CAP
+			h = h.normalized() * minf(h.length(), cap)
 		curve.add_point(p, -h, h)
 	curve.bake_interval = 0.5
 	length = curve.get_baked_length()
@@ -275,17 +288,21 @@ func _build_walls() -> void:
 			var oj := pts[j] + rj * (half_w + WALL_T)
 			var ti := pts[i].y + WALL_H
 			var tj := pts[j].y + WALL_H
+			# the skirt hangs WALL_SINK below the surface it stands on, so a barrier on a
+			# climb stays a barrier instead of becoming a slab reaching down to sea level
+			var bi := pts[i].y - WALL_SINK
+			var bj := pts[j].y - WALL_SINK
 			var u0 := i * seg
 			var u1 := u0 + seg
 			var uv := [Vector2(0, u0), Vector2(1, u0), Vector2(1, u1), Vector2(0, u1)]
-			var ib_i := Vector3(ii.x, -1.5, ii.z)
-			var ib_j := Vector3(ij.x, -1.5, ij.z)
+			var ib_i := Vector3(ii.x, bi, ii.z)
+			var ib_j := Vector3(ij.x, bj, ij.z)
 			var it_i := Vector3(ii.x, ti, ii.z)
 			var it_j := Vector3(ij.x, tj, ij.z)
 			var ot_i := Vector3(oi.x, ti, oi.z)
 			var ot_j := Vector3(oj.x, tj, oj.z)
-			var ob_i := Vector3(oi.x, -1.5, oi.z)
-			var ob_j := Vector3(oj.x, -1.5, oj.z)
+			var ob_i := Vector3(oi.x, bi, oi.z)
+			var ob_j := Vector3(oj.x, bj, oj.z)
 			_quad(st, [ib_i, it_i, it_j, ib_j], uv, -ri)
 			_quad(st, [it_i, ot_i, ot_j, it_j], uv, Vector3.UP)
 			_quad(st, [ob_i, ot_i, ot_j, ob_j], uv, ri)
@@ -449,14 +466,32 @@ func _in_span(off: float, a: float, b: float) -> bool:
 
 # ---------- tunnels ----------
 
-## Tunnel spans declared in the track data as real metres (start_m / end_m), so a
-## designer places the Portier tunnel by distance, not by guessed lap fraction.
+## Offset of a control point on the baked spline. Lets a circuit anchor a tunnel to the
+## corner it starts and ends at instead of hand-counting metres along the lap.
+func _offset_of_point(src: Array, idx: int) -> float:
+	if src.is_empty():
+		return 0.0
+	var p: Vector3 = src[clampi(idx, 0, src.size() - 1)]
+	return fposmod(curve.get_closest_offset(p), maxf(length, 1.0))
+
+## Tunnel spans from the track data, in any of three forms: control-point indices
+## (start_pt / end_pt), metres from the line (start_m / end_m), or lap fractions.
 func _plan_tunnels() -> void:
 	tunnels.clear()
+	var src: Array = GameState.track_points(data)
 	for t in data.get("tunnels", []):
 		var tt: Dictionary = t
-		var a := fposmod(float(tt.get("start_m", 0.0)), maxf(length, 1.0))
-		var b := fposmod(float(tt.get("end_m", 0.0)), maxf(length, 1.0))
+		var a := 0.0
+		var b := 0.0
+		if tt.has("start_pt") or tt.has("end_pt"):
+			a = _offset_of_point(src, int(tt.get("start_pt", 0)))
+			b = _offset_of_point(src, int(tt.get("end_pt", 0)))
+		elif tt.has("start_m") or tt.has("end_m"):
+			a = fposmod(float(tt.get("start_m", 0.0)), maxf(length, 1.0))
+			b = fposmod(float(tt.get("end_m", 0.0)), maxf(length, 1.0))
+		else:
+			a = fposmod(float(tt.get("start", 0.0)) * length, length)
+			b = fposmod(float(tt.get("end", 0.0)) * length, length)
 		if absf(b - a) < 1.0:
 			continue
 		tunnels.append({
@@ -828,6 +863,117 @@ func _box(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> MeshIns
 	parent.add_child(mi)
 	return mi
 
+# ---------- flyovers ----------
+
+## Anything genuinely off the ground gets a real viaduct under it: a fascia beam down
+## each edge, a slab soffit, piers to the ground every ~34 m and a warm strip beneath the
+## fascia. This is what makes the Monaco climb and its crossing over the start straight
+## read as flyovers instead of a ribbon of tarmac floating in the air.
+const DECK_DEPTH := 1.5
+
+func _build_deckwork() -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var glow := SurfaceTool.new()
+	glow.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var outer := half_w + WALL_T + 0.6
+	var ground := -0.06
+	var built := false
+	var lit := false
+	for i in count:
+		var j := (i + 1) % count
+		if pts[i].y - DECK_DEPTH < 0.9 and pts[j].y - DECK_DEPTH < 0.9:
+			continue
+		var r0 := rights[i]
+		var r1 := rights[j]
+		var top0 := pts[i].y - 0.05
+		var top1 := pts[j].y - 0.05
+		var bot0 := top0 - DECK_DEPTH
+		var bot1 := top1 - DECK_DEPTH
+		var u0 := i * seg * 0.1
+		var u1 := u0 + seg * 0.1
+		var quad_uv := [Vector2(0, u0), Vector2(0, u1), Vector2(1, u1), Vector2(1, u0)]
+		for s in [-1.0, 1.0]:
+			var e0: Vector3 = pts[i] + r0 * (s * outer)
+			var e1: Vector3 = pts[j] + r1 * (s * outer)
+			_quad(st, [Vector3(e0.x, top0, e0.z), Vector3(e1.x, top1, e1.z),
+				Vector3(e1.x, bot1, e1.z), Vector3(e0.x, bot0, e0.z)], quad_uv, (r0 * s).normalized())
+			built = true
+			# warm strip recessed under the fascia edge
+			var g0: Vector3 = pts[i] + r0 * (s * (outer - 0.28))
+			var g1: Vector3 = pts[j] + r1 * (s * (outer - 0.28))
+			_quad(glow, [Vector3(g0.x, bot0 + 0.09, g0.z), Vector3(g1.x, bot1 + 0.09, g1.z),
+				Vector3(e1.x, bot1 + 0.09, e1.z), Vector3(e0.x, bot0 + 0.09, e0.z)],
+				quad_uv, Vector3.DOWN)
+			lit = true
+		# soffit: the underside a car passes beneath
+		var l0: Vector3 = pts[i] - r0 * outer
+		var l1: Vector3 = pts[j] - r1 * outer
+		var m0: Vector3 = pts[i] + r0 * outer
+		var m1: Vector3 = pts[j] + r1 * outer
+		_quad(st, [Vector3(l0.x, bot0, l0.z), Vector3(l1.x, bot1, l1.z),
+			Vector3(m1.x, bot1, m1.z), Vector3(m0.x, bot0, m0.z)], quad_uv, Vector3.DOWN)
+	# piers down to the ground
+	var every := maxi(int(34.0 / maxf(seg, 0.5)), 3)
+	for i in range(0, count, every):
+		var top_y := pts[i].y - DECK_DEPTH
+		var h := top_y - ground
+		if h < 2.4 or in_tunnel(i * seg) or _pier_blocked(i):
+			continue
+		var f := Vector3(tans[i].x, 0.0, tans[i].z).normalized()
+		var basis := Basis.looking_at(f, Vector3.UP)
+		_st_box(st, Transform3D(basis, Vector3(pts[i].x, ground + h * 0.5, pts[i].z)),
+			Vector3(2.8, h, 1.9))
+		_st_box(st, Transform3D(basis, Vector3(pts[i].x, top_y - 0.5, pts[i].z)),
+			Vector3(half_w * 2.1, 1.0, 2.3))
+		built = true
+	if built:
+		_add_mesh(st.commit(), load("res://starter/mat-urban/concrete_triplanar.tres"))
+	if lit:
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(0.98, 0.9, 0.7)
+		mat.emission_enabled = true
+		mat.emission = Color(1.0, 0.78, 0.45)
+		mat.emission_energy_multiplier = 2.4
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_add_mesh(glow.commit(), mat, false)
+
+## A pier must never stand in the road it is flying over: reject it when another, lower
+## stretch of the circuit runs underneath.
+func _pier_blocked(i: int) -> bool:
+	var here := pts[i]
+	for k in count:
+		var gap := absi(k - i)
+		gap = mini(gap, count - gap)
+		if gap < 8:
+			continue
+		var other := pts[k]
+		if other.y > here.y - 1.0:
+			continue
+		if Vector2(other.x - here.x, other.z - here.z).length() < half_w + 3.0:
+			return true
+	return false
+
+## One box appended to a surface tool, with outward-facing normals.
+func _st_box(st: SurfaceTool, xf: Transform3D, size: Vector3) -> void:
+	var h := size * 0.5
+	var corners := [
+		Vector3(-h.x, -h.y, -h.z), Vector3(h.x, -h.y, -h.z), Vector3(h.x, -h.y, h.z), Vector3(-h.x, -h.y, h.z),
+		Vector3(-h.x, h.y, -h.z), Vector3(h.x, h.y, -h.z), Vector3(h.x, h.y, h.z), Vector3(-h.x, h.y, h.z),
+	]
+	var faces := [
+		[0, 1, 2, 3], [7, 6, 5, 4], [4, 5, 1, 0],
+		[3, 2, 6, 7], [1, 5, 6, 2], [4, 0, 3, 7],
+	]
+	var uv := [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
+	for f in faces:
+		var q: Array = []
+		for k in f:
+			q.append(xf * corners[k])
+		var centre: Vector3 = (q[0] + q[1] + q[2] + q[3]) * 0.25
+		var n := (centre - xf.origin).normalized()
+		_quad(st, q, uv, n)
+
 # ---------- surroundings ----------
 
 ## Scenery is chosen by the track theme: a street block, an open speedway, an alpine
@@ -1009,6 +1155,9 @@ func _build_buildings() -> void:
 	var box := BoxMesh.new()
 	for i in range(0, count, 11):
 		for s in [-1.0, 1.0]:
+			# never drop a block into the pit lane or across its garages
+			if s == pit_side and _in_span(i * seg, float(pit["entry"]), float(pit["exit"])):
+				continue
 			var w := _rng.randf_range(14, 26)
 			var d := _rng.randf_range(12, 22)
 			var h := _rng.randf_range(14, 42) + pts[i].y
