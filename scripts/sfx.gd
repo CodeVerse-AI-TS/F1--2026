@@ -21,6 +21,27 @@ func _ready() -> void:
 		_players.append(p)
 	_build()
 
+## Tunnel acoustics: 0 = open air, 1 = deep under the vault. The exhaust gets a
+## short slap-back copy of itself and the SFX bus is lifted a touch, which is the
+## trick that turns the engine note into the Monaco tunnel roar.
+var _echo: AudioStreamPlayer
+var _tunnel := 0.0
+
+func set_tunnel(amount: float, speed_ratio := 0.5) -> void:
+	_tunnel = clampf(amount, 0.0, 1.0)
+	if _streams.has("echo"):
+		# the slap-back rides a delayed copy of the engine band, bounced off the vault
+		_set_stream_level("echo", _tunnel * (0.35 + 0.4 * clampf(speed_ratio, 0.0, 1.0)))
+	# a resonant lift on the whole SFX bus inside the tunnel
+	var idx := AudioServer.get_bus_index("SFX")
+	if idx >= 0:
+		AudioServer.set_bus_volume_db(idx, lerpf(0.0, 3.0, _tunnel))
+
+## Level of one continuous layer, 0..1. The echo bed is just another loop, so this
+## simply routes through set_loop and keeps one code path for held sounds.
+func _set_stream_level(sound: String, level: float) -> void:
+	set_loop(sound, level)
+
 ## Fire a one-shot. Unknown names are ignored so callers never need to guard.
 func play(sound: String, volume_db := 0.0, pitch := 1.0) -> void:
 	if not _streams.has(sound) or _players.is_empty():
@@ -31,6 +52,21 @@ func play(sound: String, volume_db := 0.0, pitch := 1.0) -> void:
 	p.volume_db = volume_db
 	p.pitch_scale = pitch
 	p.play()
+	# every one-shot also throws a tunnel echo while we are under the vault
+	if _tunnel > 0.05 and sound != "echo" and _streams.has("echo"):
+		_emit_echo(volume_db - lerpf(14.0, 5.0, _tunnel), pitch * 0.98)
+
+func _emit_echo(volume_db: float, pitch: float) -> void:
+	if _echo == null:
+		_echo = AudioStreamPlayer.new()
+		_echo.bus = &"SFX"
+		_echo.stream = _streams["echo"]
+		_echo.volume_db = -60.0
+		add_child(_echo)
+		_echo.play()
+	_echo.volume_db = volume_db
+	_echo.pitch_scale = pitch
+	_echo.seek(0.0)  # restart the tail so a fresh hit lands on a fresh slap-back
 
 ## Continuous layer crossfaded by level (0 silences it). Used for tyre squeal
 ## and rain, where the volume tracks a live value instead of firing an event.
@@ -63,7 +99,8 @@ func _build() -> void:
 	_streams["squeal"] = _squeal(0.9)
 	_streams["rain"] = _rain(2.2)
 	_streams["music"] = _music(8.0)
-	for k in ["squeal", "rain", "music"]:
+	_streams["echo"] = _echo_tail(0.55)
+	for k in ["squeal", "rain", "music", "echo"]:
 		var s: AudioStreamWAV = _streams[k]
 		s.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		s.loop_begin = 0
@@ -185,6 +222,26 @@ func _music(dur: float) -> AudioStreamWAV:
 		var swell := 0.72 + 0.28 * sin(TAU * t / dur)
 		buf[i] = v * swell * 0.32
 	return _to_wav(buf)
+
+## Tunnel echo: three damped repeats of a short noise-and-tone transient, spaced so
+## the slap-back reads like concrete instead of a stutter.
+func _echo_tail(dur: float) -> AudioStreamWAV:
+	var n := int(dur * RATE)
+	var buf := PackedFloat32Array()
+	buf.resize(n)
+	var taps := [0.0, 0.085, 0.19]
+	var gains := [1.0, 0.55, 0.3]
+	var lp := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		lp = lerpf(lp, randf_range(-1.0, 1.0), 0.22)
+		var v := 0.0
+		for k in taps.size():
+			var dt: float = t - float(taps[k])
+			if dt >= 0.0:
+				v += (sin(TAU * 180.0 * dt) * 0.6 + lp * 0.4) * exp(-dt * 14.0) * float(gains[k])
+		buf[i] = v * 0.5 * minf(t * 60.0, 1.0)
+	return _to_wav(_seamless(buf))
 
 ## Equal-power crossfade of the tail into the head, for seamless noise loops.
 func _seamless(buf: PackedFloat32Array) -> PackedFloat32Array:
