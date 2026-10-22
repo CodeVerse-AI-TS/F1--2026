@@ -193,9 +193,10 @@ func _deploy_safety_car() -> void:
 	for ai in ais:
 		ai.pace_limit = safety_car_pace
 	hud.set_flag("SAFETY CAR", hud.GOLD)
-	sfx.play("siren", -7.0)
-	hud.toast("SAFETY CAR DEPLOYED  -  HOLD POSITION", hud.GOLD, 3.0)
 	sfx.play("siren", -4.0)
+	sfx.play("radio")
+	hud.show_team_radio("Safety Car deployed! Keep delta positive, hold position.", "RACE ENGINEER")
+	hud.toast("SAFETY CAR DEPLOYED  -  HOLD POSITION", hud.GOLD, 3.0)
 
 func _retire_safety_car() -> void:
 	safety_active = false
@@ -204,6 +205,8 @@ func _retire_safety_car() -> void:
 	for ai in ais:
 		ai.pace_limit = 0.0
 	hud.set_flag("")
+	sfx.play("radio")
+	hud.show_team_radio("Safety Car in this lap. Green flag racing on exit.", "RACE ENGINEER")
 	hud.toast("SAFETY CAR IN  -  GREEN FLAG", hud.GREEN, 2.5)
 
 func _update_safety_car(delta: float) -> void:

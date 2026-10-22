@@ -137,6 +137,7 @@ func _ready() -> void:
 	_build_race_widgets(root)
 	_build_tyre_panel(root)
 	_build_conditions(root)
+	_build_radio_widget(root)
 
 func _build_race_widgets(root: Control) -> void:
 	# DRS badge, left of the boost meter
@@ -488,6 +489,10 @@ func _process(delta: float) -> void:
 	if _toast_t > 0.0:
 		_toast_t -= delta
 		_toast.modulate.a = clampf(_toast_t / 0.4, 0.0, 1.0)
+	if _radio_timer > 0.0:
+		_radio_timer -= delta
+		if _radio_panel:
+			_radio_panel.modulate.a = clampf(_radio_timer / 0.4, 0.0, 1.0)
 	_update_fps()
 
 ## Optional performance counter. Built on first use, toggled from Settings.
@@ -607,6 +612,40 @@ func _build_conditions(root: Control) -> void:
 	_style(_flag_lbl, 22, GOLD)
 	_flag_lbl.modulate.a = 0.0
 	root.add_child(_flag_lbl)
+
+var _radio_panel: Panel
+var _radio_title: Label
+var _radio_msg: Label
+var _radio_timer := 0.0
+
+func _build_radio_widget(root: Control) -> void:
+	_radio_panel = Panel.new()
+	var rsb := StyleBoxFlat.new()
+	rsb.bg_color = Color(0.04, 0.06, 0.1, 0.88)
+	rsb.border_color = Color(0.2, 0.85, 1.0, 0.9)
+	rsb.border_width_left = 4
+	rsb.set_corner_radius_all(6)
+	_radio_panel.add_theme_stylebox_override("panel", rsb)
+	_radio_panel.anchor_left = 0.5
+	_radio_panel.anchor_right = 0.5
+	_radio_panel.offset_left = -230
+	_radio_panel.offset_right = 230
+	_radio_panel.offset_top = 28
+	_radio_panel.offset_bottom = 82
+	_radio_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_radio_panel.modulate.a = 0.0
+	root.add_child(_radio_panel)
+
+	_radio_title = _label(_radio_panel, "📻 TEAM RADIO", 11, Color(0.3, 0.85, 1.0), Vector2(14, 6))
+	_radio_msg = _label(_radio_panel, "", 15, Color.WHITE, Vector2(14, 22))
+
+func show_team_radio(msg: String, speaker := "RACE ENGINEER", duration := 4.2) -> void:
+	if _radio_panel == null:
+		return
+	_radio_title.text = "📻 TEAM RADIO - " + speaker.to_upper()
+	_radio_msg.text = msg
+	_radio_timer = duration
+	_radio_panel.modulate.a = 1.0
 
 ## Tunnel exit flash, 0 = clear, 1 = full white. Also lifts the exposure feel by
 ## briefly washing the darker tunnel frame out.

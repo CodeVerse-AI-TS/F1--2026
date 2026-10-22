@@ -100,6 +100,7 @@ func _build() -> void:
 	_streams["rain"] = _rain(2.2)
 	_streams["music"] = _music(8.0)
 	_streams["echo"] = _echo_tail(0.55)
+	_streams["radio"] = _radio_chirp(0.18)
 	for k in ["squeal", "rain", "music", "echo"]:
 		var s: AudioStreamWAV = _streams[k]
 		s.loop_mode = AudioStreamWAV.LOOP_FORWARD
@@ -251,3 +252,19 @@ func _seamless(buf: PackedFloat32Array) -> PackedFloat32Array:
 		var tail := buf[buf.size() - fade + i]
 		buf[i] = buf[i] * a + tail * (1.0 - a)
 	return buf
+
+## Two-tone pit-wall radio chirp with micro squelch burst.
+func _radio_chirp(dur: float) -> AudioStreamWAV:
+	var n := int(dur * RATE)
+	var buf := PackedFloat32Array()
+	buf.resize(n)
+	var f1 := 1780.0
+	var f2 := 2460.0
+	for i in n:
+		var t := float(i) / RATE
+		var f := f1 if t < dur * 0.45 else f2
+		var tone := sin(TAU * f * t) * 0.65
+		var squelch := randf_range(-0.15, 0.15) if t < 0.02 or t > dur - 0.02 else 0.0
+		var env := smoothstep(0.0, 0.015, t) * (1.0 - smoothstep(dur - 0.02, dur, t))
+		buf[i] = (tone + squelch) * env * 0.4
+	return _to_wav(buf)
