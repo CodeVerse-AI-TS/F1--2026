@@ -74,6 +74,7 @@ func _ready() -> void:
 	_apply_sky()
 	_build_curve()
 	_sample()
+	_build_speed_profile()
 	_body = StaticBody3D.new()
 	add_child(_body)
 	_plan_pit()
@@ -83,11 +84,11 @@ func _ready() -> void:
 	_build_kerbs_and_lines()
 	_build_start()
 	_build_drs()
+	_build_brake_markers()
 	_build_pit_lane()
 	_build_tunnels()
 	_build_deckwork()
 	_build_world()
-	_build_speed_profile()
 
 ## Sky and sun for this theme. The golden-hour look rig duplicates its Environment,
 ## so the values set here stay with this track's instance.
@@ -450,6 +451,39 @@ func _drs_board(xf: Transform3D, text: String, col: Color) -> void:
 		l.shaded = false
 		add_child(l)
 		l.global_transform = xf.translated_local(Vector3(s * (half_w + 0.4), WALL_H + 1.2, 0))
+
+## Brake distance countdown boards (150, 100, 50) leading into heavy braking zones.
+func _build_brake_markers() -> void:
+	if _speed.is_empty():
+		return
+	var white := StandardMaterial3D.new()
+	white.albedo_color = Color(0.96, 0.96, 0.96)
+	white.roughness = 0.35
+	var span_check := maxi(int(90.0 / seg), 2)
+	for i in range(span_check, count - 10, 4):
+		var v_cur: float = _speed[i]
+		var v_prev: float = _speed[(i - span_check + count) % count]
+		# entering a braking zone that scrubs at least 18 m/s (~65 km/h) into an apex
+		if v_prev - v_cur > 18.0 and _speed[(i + 4) % count] >= v_cur - 1.0:
+			var apex_off := float(i) * seg
+			for d in [150.0, 100.0, 50.0]:
+				var b_off := fposmod(apex_off - d, length)
+				if in_tunnel(b_off):
+					continue
+				var b_xf := get_xform(b_off)
+				var side := 1.0 if _bank_angle[int(b_off / seg)] >= 0.0 else -1.0
+				var sign_pos := b_xf.origin + b_xf.basis.x * (side * (half_w + WALL_T + 0.08)) + Vector3.UP * (WALL_H + 0.45)
+				var board := _box(self, Vector3(0.08, 0.6, 0.95), sign_pos, white)
+				board.global_transform.basis = b_xf.basis
+				var lbl := Label3D.new()
+				lbl.text = str(int(d))
+				lbl.font_size = 85
+				lbl.pixel_size = 0.007
+				lbl.modulate = Color(0.05, 0.05, 0.06)
+				lbl.outline_size = 0
+				lbl.shaded = false
+				add_child(lbl)
+				lbl.global_transform = b_xf.translated_local(Vector3(side * (half_w + WALL_T - 0.02), WALL_H + 0.45, 0))
 
 ## Pit lane on the inside of the main straight: parallel apron, pit wall, garages,
 ## limiter lines at the entry and exit, and a marked pit box.
