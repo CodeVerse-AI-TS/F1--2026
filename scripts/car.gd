@@ -237,7 +237,7 @@ func _physics_process(delta: float) -> void:
 	_land_t = maxf(_land_t - delta, 0.0)
 	var sparks := on_floor and speed > 40.0 and (kerb > 0.3 or speed > spark_speed or _land_t > 0.0)
 	model.set_drs(drs_open)
-	model.update_visual(delta, speed, steer, _boost_vis, brake_in, throttle_in, sparks)
+	model.update_visual(delta, speed, steer, _boost_vis, brake_in, throttle_in, sparks, gear)
 	var floor_n := get_floor_normal()
 	if on_floor and floor_n.length_squared() > 0.001:
 		# align the body to the surface; a zero normal on the first grounded frame

@@ -36,6 +36,11 @@ var _dark: StandardMaterial3D
 var _helmet: StandardMaterial3D
 var _rain: StandardMaterial3D
 
+var _mfd_gear: Label3D
+var _mfd_speed: Label3D
+var _shift_leds: Array[MeshInstance3D] = []
+var _led_mats: Array[StandardMaterial3D] = []
+
 func _ready() -> void:
 	_make_materials()
 	_chassis = Node3D.new()
@@ -157,7 +162,41 @@ func _build_body() -> void:
 	hs.height = 0.32
 	_part(hs, Vector3(0, 0.82, -0.45), _helmet)
 	_box(Vector3(0.18, 0.04, 0.03), Vector3(0, 0.84, -0.58), _dark)
+	# Steering wheel and active MFD telemetry display
 	_box(Vector3(0.26, 0.12, 0.03), Vector3(0, 0.72, -0.82), _carbon, Vector3(-30, 0, 0))
+	_box(Vector3(0.14, 0.07, 0.01), Vector3(0, 0.725, -0.805), _dark, Vector3(-30, 0, 0))
+	_mfd_gear = Label3D.new()
+	_mfd_gear.text = "1"
+	_mfd_gear.font_size = 54
+	_mfd_gear.pixel_size = 0.0015
+	_mfd_gear.modulate = Color(1.0, 0.92, 0.35)
+	_mfd_gear.outline_size = 0
+	_mfd_gear.shaded = false
+	_mfd_gear.position = Vector3(-0.026, 0.725, -0.795)
+	_mfd_gear.rotation_degrees = Vector3(-30, 0, 0)
+	_chassis.add_child(_mfd_gear)
+
+	_mfd_speed = Label3D.new()
+	_mfd_speed.text = "0"
+	_mfd_speed.font_size = 38
+	_mfd_speed.pixel_size = 0.0013
+	_mfd_speed.modulate = Color(0.85, 0.95, 1.0)
+	_mfd_speed.outline_size = 0
+	_mfd_speed.shaded = false
+	_mfd_speed.position = Vector3(0.026, 0.725, -0.795)
+	_mfd_speed.rotation_degrees = Vector3(-30, 0, 0)
+	_chassis.add_child(_mfd_speed)
+
+	var led_colors := [Color(0.2, 1.0, 0.3), Color(0.2, 1.0, 0.3), Color(1.0, 0.15, 0.1), Color(1.0, 0.15, 0.1), Color(0.2, 0.55, 1.0)]
+	for k in 5:
+		var m := StandardMaterial3D.new()
+		m.albedo_color = led_colors[k] * 0.25
+		m.emission_enabled = true
+		m.emission = led_colors[k]
+		m.emission_energy_multiplier = 0.0
+		_led_mats.append(m)
+		var led := _box(Vector3(0.016, 0.008, 0.008), Vector3(-0.04 + k * 0.02, 0.765, -0.785), m, Vector3(-30, 0, 0))
+		_shift_leds.append(led)
 	_box(Vector3(0.06, 0.25, 0.06), Vector3(0, 0.8, -1.0), _carbon)
 	var tor := TorusMesh.new()
 	tor.inner_radius = 0.3
@@ -299,13 +338,22 @@ func set_drs(open: bool) -> void:
 	_drs_target = 1.0 if open else 0.0
 
 func update_visual(delta: float, speed: float, steer: float, boost_amount: float,
-		brake := 0.0, throttle := 0.0, sparks := false) -> void:
+		brake := 0.0, throttle := 0.0, sparks := false, p_gear := 1) -> void:
 	_t += delta
 	for w in wheels:
 		w.rotate_x(-speed / 0.35 * delta)
 	for p in front_pivots:
 		p.rotation.y = steer * 0.38
 	var ratio := clampf(absf(speed) / 88.0, 0.0, 1.2)
+	# MFD live gear, speed, and shift lights
+	if _mfd_gear:
+		_mfd_gear.text = str(clampi(p_gear, 1, 8))
+	if _mfd_speed:
+		_mfd_speed.text = str(int(round(absf(speed) * 3.6)))
+	var rev_pct := clampf((absf(speed) / 88.0) * 1.15, 0.0, 1.0)
+	for k in _led_mats.size():
+		var threshold := float(k + 1) / 5.5
+		_led_mats[k].emission_energy_multiplier = 4.5 if rev_pct >= threshold else 0.0
 	# suspension: high-frequency bob with speed, nose dive under braking, squat under throttle
 	_chassis.position.y = sin(_t * 23.0) * bob_amount * ratio + sin(_t * 7.3) * bob_amount * 0.5 * ratio
 	var pitch := -brake * pitch_brake * clampf(ratio * 2.0, 0.0, 1.0) + throttle * pitch_accel * (1.0 - ratio)
