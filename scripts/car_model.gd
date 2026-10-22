@@ -23,6 +23,7 @@ var _drs_target := 0.0
 var _brake_heat := 0.0
 var _t := 0.0
 var _sparks: GPUParticles3D
+var _smoke: GPUParticles3D
 var _labels: Array[Label3D] = []
 
 var _body: StandardMaterial3D
@@ -51,6 +52,7 @@ func _ready() -> void:
 	if not ghost:
 		_build_livery_labels()
 		_build_sparks()
+		_build_tyre_smoke()
 		boost_light = OmniLight3D.new()
 		boost_light.light_color = Color(1.0, 0.7, 0.3)
 		boost_light.omni_range = 6.0
@@ -309,6 +311,35 @@ func _build_sparks() -> void:
 	_sparks.draw_pass_1 = q
 	_chassis.add_child(_sparks)
 
+func _build_tyre_smoke() -> void:
+	_smoke = GPUParticles3D.new()
+	_smoke.amount = 40
+	_smoke.lifetime = 0.45
+	_smoke.emitting = false
+	_smoke.local_coords = false
+	_smoke.position = Vector3(0, 0.1, -1.2)
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0, 0.35, 1.0)
+	pm.spread = 30.0
+	pm.initial_velocity_min = 2.0
+	pm.initial_velocity_max = 7.0
+	pm.gravity = Vector3(0, 1.2, 0)
+	pm.scale_min = 0.5
+	pm.scale_max = 2.0
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(0.85, 0.06, 0.35)
+	_smoke.process_material = pm
+	var q := QuadMesh.new()
+	q.size = Vector2(0.4, 0.4)
+	var sm := StandardMaterial3D.new()
+	sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sm.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	sm.albedo_color = Color(0.92, 0.92, 0.95, 0.22)
+	q.material = sm
+	_smoke.draw_pass_1 = q
+	_chassis.add_child(_smoke)
+
 # ---------- public API ----------
 
 ## Team livery: primary body colour, secondary stripes/flaps, accent glow, sponsor text and number.
@@ -373,3 +404,5 @@ func update_visual(delta: float, speed: float, steer: float, boost_amount: float
 	# rear light flashes under heavy braking
 	_rain.emission_energy_multiplier = 6.0 if brake > 0.5 and fmod(_t, 0.2) < 0.1 else 2.5
 	_sparks.emitting = sparks
+	if _smoke:
+		_smoke.emitting = brake > 0.65 and absf(speed) > 18.0
