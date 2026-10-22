@@ -2,6 +2,7 @@ extends CharacterBody3D
 ## Arcade F1 handling: instant throttle, absolute grip, short braking, Overtake Boost.
 
 signal wall_hit(impact: float)
+signal gear_shifted(new_gear: int)
 
 @export var top_speed := 88.0      # ~317 km/h
 @export var boost_speed := 101.0   # ~364 km/h
@@ -280,8 +281,10 @@ func _update_gearbox() -> void:
 	var low: float = 0.0 if gear == 1 else GEAR_TOPS[gear - 2] * boost_speed
 	if gear < 8 and sp > top * 0.97:
 		gear += 1
+		gear_shifted.emit(gear)
 	elif gear > 1 and sp < low * 0.8:
 		gear -= 1
+		gear_shifted.emit(gear)
 	top = GEAR_TOPS[gear - 1] * boost_speed
 	var target := maxf(4200.0, sp / top * 12500.0)
 	if sp < 2.0:

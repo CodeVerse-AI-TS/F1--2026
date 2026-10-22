@@ -101,7 +101,9 @@ func _build() -> void:
 	_streams["music"] = _music(8.0)
 	_streams["echo"] = _echo_tail(0.55)
 	_streams["radio"] = _radio_chirp(0.18)
-	for k in ["squeal", "rain", "music", "echo"]:
+	_streams["gear_pop"] = _gear_pop(0.08)
+	_streams["rumble"] = _kerb_rumble(0.6)
+	for k in ["squeal", "rain", "music", "echo", "rumble"]:
 		var s: AudioStreamWAV = _streams[k]
 		s.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		s.loop_begin = 0
@@ -268,3 +270,27 @@ func _radio_chirp(dur: float) -> AudioStreamWAV:
 		var env := smoothstep(0.0, 0.015, t) * (1.0 - smoothstep(dur - 0.02, dur, t))
 		buf[i] = (tone + squelch) * env * 0.4
 	return _to_wav(buf)
+
+## High-RPM ignition cut pneumatic pop on gear shifts.
+func _gear_pop(dur: float) -> AudioStreamWAV:
+	var n := int(dur * RATE)
+	var buf := PackedFloat32Array()
+	buf.resize(n)
+	for i in n:
+		var t := float(i) / RATE
+		var pop := sin(TAU * 130.0 * t) * exp(-t * 50.0)
+		var snap := randf_range(-0.7, 0.7) * exp(-t * 110.0)
+		buf[i] = (pop * 0.7 + snap * 0.5) * 0.65
+	return _to_wav(buf)
+
+## Kerb vibration audio rumble when riding the rumble strips.
+func _kerb_rumble(dur: float) -> AudioStreamWAV:
+	var n := int(dur * RATE)
+	var buf := PackedFloat32Array()
+	buf.resize(n)
+	for i in n:
+		var t := float(i) / RATE
+		var saw := fmod(t * 85.0, 1.0) * 2.0 - 1.0
+		var sub := sin(TAU * 42.0 * t) * 0.5
+		buf[i] = (saw * 0.4 + sub * 0.6) * 0.45
+	return _to_wav(_seamless(buf))

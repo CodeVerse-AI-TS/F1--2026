@@ -142,6 +142,7 @@ func _ready() -> void:
 	car.traction_assist = 1.0 if int(GameState.settings.get("traction", 1)) == 1 else 0.0
 	car.brake_assist = 1.0 if int(GameState.settings.get("brake_aid", 0)) == 1 else 0.0
 	car.wall_hit.connect(_on_wall_hit)
+	car.gear_shifted.connect(func(_g: int) -> void: sfx.play("gear_pop", -4.5))
 	_setup_weather()
 	_setup_safety_car()
 	cam.set_view(int(GameState.settings["camera"]), true)
@@ -510,6 +511,7 @@ func _physics_process(delta: float) -> void:
 	# continuous audio: tyre scrub follows the car, rain follows the sky
 	sfx.set_loop("squeal", car.slip * 0.5)
 	sfx.set_loop("rain", car.wetness * 0.35)
+	sfx.set_loop("rumble", car.kerb * 0.55)
 	_update_tunnel(off)
 	_update_safety_car(delta)
 	# film material: the session keeps a short trace of the player for the finish replay
