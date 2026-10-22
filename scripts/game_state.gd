@@ -66,6 +66,9 @@ const TRACKS := [
 		],
 		"pit": {"entry": 0.955, "exit": 0.06, "box": 0.985},
 		"banking": 1.0,
+		# a rock gallery bored through the hillside on the plunge out of Les Combes,
+		# placed by control point so it sits on the descent it belongs to
+		"tunnels": [{"start_pt": 15, "end_pt": 18, "height": 7.2, "wall_extra": 1.4}],
 	},
 	{
 		"id": "monza", "name": "Autodromo Nazionale Monza", "theme": "park",
@@ -92,6 +95,8 @@ const TRACKS := [
 		],
 		"pit": {"entry": 0.93, "exit": 0.05, "box": 0.975},
 		"banking": 0.35,
+		# the Serraglio back straight ducks under the historic park overpass
+		"tunnels": [{"start_pt": 12, "end_pt": 14, "height": 7.6, "wall_extra": 1.6}],
 	},
 	{
 		"id": "silverstone", "name": "Silverstone Circuit", "theme": "airfield",
@@ -120,6 +125,8 @@ const TRACKS := [
 		],
 		"pit": {"entry": 0.94, "exit": 0.05, "box": 0.98},
 		"banking": 0.6,
+		# Hangar Straight runs through a concrete underpass at the airfield perimeter
+		"tunnels": [{"start_pt": 16, "end_pt": 19, "height": 6.8, "wall_extra": 1.2}],
 	},
 	{
 		"id": "suzuka", "name": "Suzuka Circuit", "theme": "grandstand",
@@ -155,27 +162,52 @@ const TRACKS := [
 	},
 	{
 		"id": "monaco", "name": "Monte Carlo Street Circuit", "theme": "street",
-		"half_w": 7.5, "difficulty": 3, "corners": 19, "length_km": 3.337, "banking": 0.0,
-		"desc": "Harbour walls with no run-off: Sainte Devote, the climb to Casino, Mirabeau, the Loews hairpin, the Portier tunnel, the seafront, Tabac and the Nouvelle Chicane.",
+		"half_w": 7.5, "difficulty": 3, "corners": 16, "length_km": 2.85, "banking": 0.0,
+		"desc": "Harbour walls with no run-off: Sainte Devote, the long climb carried over the city to the Casino plateau, the tunnel bored through the rock, the covered gallery on the descent, then the flyover across the start straight and the dive back down to the line.",
 		"points": [
-			Vector3(0, 0, 0), Vector3(0, 0, -120), Vector3(-8, 0, -200),
-			Vector3(-40, 1, -250), Vector3(-110, 3, -270),
-			Vector3(-170, 6, -240), Vector3(-200, 9, -170),
-			Vector3(-190, 11, -110), Vector3(-150, 12, -80), Vector3(-110, 12, -100),
-			Vector3(-90, 11, -160),
-			Vector3(-130, 10, -210), Vector3(-190, 9, -230), Vector3(-240, 8, -200),
-			Vector3(-250, 7, -140),
-			Vector3(-270, 6, -90), Vector3(-310, 5, -40),
-			Vector3(-340, 4, 30), Vector3(-320, 3, 100), Vector3(-250, 2, 140),
-			Vector3(-160, 1, 150), Vector3(-90, 0, 120),
-			Vector3(-70, 0, 60), Vector3(-110, 0, 20), Vector3(-170, 0, 0),
-			Vector3(-200, 0, -50), Vector3(-160, 0, -90), Vector3(-90, 0, -70),
-			Vector3(-40, 0, -30),
+			# main straight, start line at the harbour end
+			Vector3(0, 0, 0), Vector3(0, 0, -180), Vector3(0, 0, -360),
+			# T1 Sainte Devote: one clean 70 m radius onto the west climb
+			Vector3(-3, 0.2, -379), Vector3(-11, 0.6, -397), Vector3(-24, 1.2, -412),
+			Vector3(-40, 2.0, -423), Vector3(-58, 2.8, -429), Vector3(-78, 3.4, -431),
+			# Beau Rivage climb across the hillside
+			Vector3(-150, 4.6, -439), Vector3(-235, 6.2, -446), Vector3(-320, 7.8, -450),
+			Vector3(-400, 9.0, -444), Vector3(-462, 9.6, -434),
+			# Casino plateau sweeper
+			Vector3(-493, 9.9, -422), Vector3(-509, 10.0, -409), Vector3(-522, 10.0, -396),
+			Vector3(-532, 10.0, -381), Vector3(-538, 10.0, -368), Vector3(-540, 9.9, -352),
+			Vector3(-542, 9.8, -320), Vector3(-543, 9.5, -288),
+			# Massenet: the plateau turns back east
+			Vector3(-541, 9.4, -273), Vector3(-535, 9.3, -259), Vector3(-526, 9.2, -247),
+			Vector3(-514, 9.1, -238), Vector3(-500, 9.0, -232), Vector3(-485, 8.9, -230),
+			# the flyover run: a viaduct carried east over the city
+			Vector3(-440, 8.8, -228), Vector3(-370, 8.6, -226), Vector3(-295, 8.4, -224),
+			Vector3(-220, 8.2, -222), Vector3(-145, 8.0, -220), Vector3(-70, 7.8, -218),
+			# the crossing: this deck passes over the start straight
+			Vector3(0, 7.6, -216),
+			Vector3(80, 7.4, -214), Vector3(150, 7.2, -208), Vector3(205, 7.0, -192),
+			# descent round the east side, with the covered gallery
+			Vector3(235, 6.6, -165), Vector3(250, 6.2, -130), Vector3(258, 5.8, -85),
+			Vector3(262, 5.3, -30), Vector3(262, 4.8, 30), Vector3(258, 4.3, 90),
+			Vector3(250, 3.9, 140), Vector3(236, 3.5, 180), Vector3(214, 3.2, 212),
+			Vector3(184, 2.9, 236),
+			# seafront run back west
+			Vector3(146, 2.7, 250), Vector3(110, 2.6, 252), Vector3(75, 2.5, 252),
+			Vector3(50, 2.4, 251), Vector3(35, 2.3, 250),
+			# final right-hander: a single 35 m quarter arc, entered square to the seafront
+			# and leaving it dead centre on the start straight, so the lap closes clean
+			Vector3(17.5, 2.0, 245.3), Vector3(4.7, 1.7, 232.5), Vector3(0, 1.3, 215),
+			Vector3(0, 0.8, 185), Vector3(0, 0.3, 150),
 		],
-		"drs": [{"detect_m": 3100.0, "start_m": 3160.0, "end_m": 3300.0}],
-		"pit": {"entry": 0.92, "exit": 0.05, "box": 0.972},
-		# the famous Portier tunnel: the run out of the hairpin, through the rock, to the seafront
-		"tunnels": [{"start_m": 1420.0, "end_m": 1880.0, "height": 6.8, "wall_extra": 1.2}],
+		"drs": [{"detect": 0.95, "start": 0.02, "end": 0.10}],
+		"pit": {"entry": 0.93, "exit": 0.05, "box": 0.975},
+		# The tunnel bored through the rock on the climb (control points 10 -> 13) and a
+		# covered gallery on the east descent (points 39 -> 43), both placed by point index
+		# so they sit exactly on the section of road they belong to.
+		"tunnels": [
+			{"start_pt": 10, "end_pt": 13, "height": 7.0, "wall_extra": 1.3},
+			{"start_pt": 39, "end_pt": 43, "height": 6.2, "wall_extra": 1.0},
+		],
 	},
 ]
 ## Per-theme sky, sun and scenery recipe used by scripts/track.gd.
@@ -206,6 +238,16 @@ const THEMES := {
 		"ground": "grass", "ground_tint": Color(0.40, 0.52, 0.30),
 		"buildings": false, "harbour": false, "hills": false, "lamps": true,
 		"vegetation": 1, "floodlights": false,
+	},
+	# Monaco: pale Mediterranean stone pressed right up to the walls, warm low sun.
+	# A street circuit has no grass and no trees, so both stay off.
+	"street": {
+		"sky_top": Color(0.60, 0.73, 0.90), "ambient": Color(0.68, 0.68, 0.68),
+		"ambient_energy": 0.90, "haze": Color(0.89, 0.87, 0.81), "fog": 0.0010,
+		"sun": Color(1.0, 0.93, 0.80), "sun_energy": 2.0,
+		"ground": "cobblestone", "ground_tint": Color(0.80, 0.76, 0.68),
+		"buildings": true, "harbour": false, "hills": true, "lamps": true,
+		"vegetation": 0, "floodlights": false,
 	},
 	# Suzuka: night grandstand, floodlights, cool colour temperature.
 	"grandstand": {
