@@ -215,8 +215,8 @@ const THEMES := {
 	# Spa: cool Ardennes forest light, deep green and a lot of tree cover.
 	"forest": {
 		"sky_top": Color(0.55, 0.66, 0.82), "ambient": Color(0.48, 0.55, 0.62),
-		"ambient_energy": 0.6, "haze": Color(0.74, 0.80, 0.84), "fog": 0.0014,
-		"sun": Color(1.0, 0.94, 0.84), "sun_energy": 1.6,
+		"ambient_energy": 0.40, "haze": Color(0.74, 0.80, 0.84), "fog": 0.0008,
+		"sun": Color(1.0, 0.94, 0.84), "sun_energy": 1.05,
 		"ground": "grass", "ground_tint": Color(0.30, 0.44, 0.26),
 		"buildings": false, "harbour": false, "hills": true, "lamps": true,
 		"vegetation": 3, "floodlights": false,
@@ -224,8 +224,8 @@ const THEMES := {
 	# Monza: Royal Park, flat, sunny, dense broadleaf parkland.
 	"park": {
 		"sky_top": Color(0.52, 0.70, 0.92), "ambient": Color(0.62, 0.68, 0.74),
-		"ambient_energy": 0.75, "haze": Color(0.86, 0.88, 0.84), "fog": 0.0008,
-		"sun": Color(1.0, 0.96, 0.86), "sun_energy": 2.0,
+		"ambient_energy": 0.42, "haze": Color(0.86, 0.88, 0.84), "fog": 0.0006,
+		"sun": Color(1.0, 0.96, 0.86), "sun_energy": 1.10,
 		"ground": "grass", "ground_tint": Color(0.36, 0.50, 0.28),
 		"buildings": false, "harbour": false, "hills": false, "lamps": true,
 		"vegetation": 3, "floodlights": false,
@@ -233,8 +233,8 @@ const THEMES := {
 	# Silverstone: open airfield, huge run-off, big British sky.
 	"airfield": {
 		"sky_top": Color(0.58, 0.68, 0.82), "ambient": Color(0.66, 0.70, 0.76),
-		"ambient_energy": 0.8, "haze": Color(0.88, 0.90, 0.92), "fog": 0.0006,
-		"sun": Color(1.0, 0.97, 0.92), "sun_energy": 1.7,
+		"ambient_energy": 0.40, "haze": Color(0.88, 0.90, 0.92), "fog": 0.0005,
+		"sun": Color(1.0, 0.97, 0.92), "sun_energy": 1.05,
 		"ground": "grass", "ground_tint": Color(0.40, 0.52, 0.30),
 		"buildings": false, "harbour": false, "hills": false, "lamps": true,
 		"vegetation": 1, "floodlights": false,
@@ -243,8 +243,8 @@ const THEMES := {
 	# A street circuit has no grass and no trees, so both stay off.
 	"street": {
 		"sky_top": Color(0.60, 0.73, 0.90), "ambient": Color(0.68, 0.68, 0.68),
-		"ambient_energy": 0.90, "haze": Color(0.89, 0.87, 0.81), "fog": 0.0010,
-		"sun": Color(1.0, 0.93, 0.80), "sun_energy": 2.0,
+		"ambient_energy": 0.45, "haze": Color(0.89, 0.87, 0.81), "fog": 0.0007,
+		"sun": Color(1.0, 0.93, 0.80), "sun_energy": 1.15,
 		"ground": "cobblestone", "ground_tint": Color(0.80, 0.76, 0.68),
 		"buildings": true, "harbour": false, "hills": true, "lamps": true,
 		"vegetation": 0, "floodlights": false,
@@ -252,8 +252,8 @@ const THEMES := {
 	# Suzuka: night grandstand, floodlights, cool colour temperature.
 	"grandstand": {
 		"sky_top": Color(0.03, 0.05, 0.11), "ambient": Color(0.16, 0.20, 0.32),
-		"ambient_energy": 0.45, "haze": Color(0.12, 0.16, 0.26), "fog": 0.0020,
-		"sun": Color(0.60, 0.74, 1.0), "sun_energy": 0.35,
+		"ambient_energy": 0.30, "haze": Color(0.12, 0.16, 0.26), "fog": 0.0014,
+		"sun": Color(0.60, 0.74, 1.0), "sun_energy": 0.25,
 		"ground": "asphalt", "ground_tint": Color(0.30, 0.32, 0.36),
 		"buildings": true, "harbour": false, "hills": true, "lamps": true,
 		"vegetation": 2, "floodlights": true,

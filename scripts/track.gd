@@ -104,10 +104,16 @@ func _apply_sky() -> void:
 		env.fog_enabled = true
 		env.fog_light_color = theme["haze"]
 		env.fog_density = float(theme["fog"])
-		env.fog_sky_affect = 0.65
-		if String(data.get("theme", "")) == "night":
-			env.glow_enabled = true
-			env.glow_intensity = 0.55
+		env.fog_sky_affect = 0.35
+		# ACES with a restrained exposure: highlights roll off instead of clipping
+		# to white, so tarmac, kerbs and apexes keep their edge at speed
+		env.tonemap_mode = Environment.TONE_MAPPER_ACES
+		env.tonemap_exposure = 0.85
+		# bloom is reserved for emitters - sparks, brake discs, rain lights and the
+		# tunnel tubes. Sunlight off paint or tarmac must never trigger a full wash.
+		env.glow_enabled = true
+		env.glow_intensity = 0.35
+		env.glow_hdr_threshold = 1.15
 	var sun := look.get_node_or_null("Sun") as DirectionalLight3D
 	if sun:
 		sun.light_color = theme["sun"]
