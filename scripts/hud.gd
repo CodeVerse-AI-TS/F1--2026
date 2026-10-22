@@ -42,10 +42,18 @@ var _speed_fx: Control
 const DRS_COLORS := [Color(0.25, 0.25, 0.28, 0.85), Color(1.0, 0.65, 0.1, 0.95), Color(0.2, 0.9, 0.3, 0.95)]
 const LED_COUNT := 15
 
+var _whiteout: ColorRect
+
 func _ready() -> void:
 	# speed streaks first, so every panel draws on top of them
 	_speed_fx = SpeedFxScript.new()
 	add_child(_speed_fx)
+	# tunnel exit flash: a full-screen white veil faded in by the session
+	_whiteout = ColorRect.new()
+	_whiteout.color = Color(1.0, 0.98, 0.94, 0.0)
+	_whiteout.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_whiteout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_whiteout)
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -599,6 +607,12 @@ func _build_conditions(root: Control) -> void:
 	_style(_flag_lbl, 22, GOLD)
 	_flag_lbl.modulate.a = 0.0
 	root.add_child(_flag_lbl)
+
+## Tunnel exit flash, 0 = clear, 1 = full white. Also lifts the exposure feel by
+## briefly washing the darker tunnel frame out.
+func set_whiteout(v: float) -> void:
+	if _whiteout:
+		_whiteout.color.a = clampf(v, 0.0, 1.0) * 0.82
 
 ## Sky condition line. col tints the text (blue-ish when wet, amber when drying).
 func set_weather(text: String, wetness: float) -> void:
