@@ -6,8 +6,11 @@ enum View { CHASE, FAR, COCKPIT, HOOD, TV, TOP }
 
 @export var car_path: NodePath
 @export var track_path: NodePath
-@export var distance := 6.2
-@export var height := 1.9
+@export var distance := 6.6
+@export var height := 2.3
+## Extra downward tilt (degrees). Lifts the camera over the rear wing so the road
+## ahead into the next braking zone stays visible.
+@export var chase_pitch := 4.0
 @export var far_distance := 10.5
 @export var far_height := 3.4
 @export var transition_time := 0.45
@@ -100,7 +103,11 @@ func _view_xform(v: int, xf: Transform3D, ratio: float) -> Transform3D:
 			return _tv_xform(o)
 		View.TOP:
 			return Transform3D(Basis.looking_at(Vector3.DOWN, _dir), o + Vector3.UP * top_height)
-	return _look(o - _dir * (distance + ratio * 0.9) + Vector3.UP * (height - ratio * 0.15), o + _dir * 6.0 + Vector3.UP * 0.9)
+	# aim slightly further down the road than the car itself: that is the line the
+	# driver is reading, and it keeps the rear wing out of the corner-entry view
+	var pitch := tan(deg_to_rad(chase_pitch)) * distance
+	return _look(o - _dir * (distance + ratio * 0.9) + Vector3.UP * (height - ratio * 0.15),
+		o + _dir * 6.0 + Vector3.UP * (0.9 - pitch * 0.5))
 
 ## Broadcast camera: fixed trackside poles every tv_spacing metres, cut to the next as the car passes.
 func _tv_xform(o: Vector3) -> Transform3D:
