@@ -9,6 +9,10 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20Web-blue)]()
 
+<br/>
+
+<img src="assets/portfolio_hero_apex_rush_2026.jpg" alt="Apex Rush: F1 2026 Key Art" width="100%" />
+
 </div>
 
 ---
@@ -36,13 +40,16 @@ Battle for the **World Championship** across a 5-round season, survive **dynamic
 - 🚦 **5-Red-Lights Race Starts**: Authentic start sequence with randomized lights-out delays for true reaction tests.
 - ⏱️ **Live Delta Telemetry & Standings**: Real-time position tracking (`P1..Pn`), gap to car ahead, micro-delta tracking sampled every 10m, and sector splits.
 - ⏪ **Instant Flashback Rewind**: Tap `R` to rewind back to the previous checkpoint after a wall strike or spin; hold `R` to restart cleanly.
-- 🛣️ **5 Procedural Circuit Presets & Themes**:
-  - **Monte Carlo Street Circuit**: Iconic harbour barriers, tight chicanes, and elevation changes.
-  - **Ocean Speedway**: Wide, banked high-speed sweepers built for maximum top speed.
-  - **Alpine Tech Park**: Precision-demanding switchbacks and technical elevation drops.
-  - **Dune Coast Circuit**: Flowing desert and coastal curves in high ambient heat.
-  - **Harbour Night Sprint**: Floodlit walls under nocturnal lighting conditions.
-- 🎥 **Multi-Angle Cameras**: Seamless toggling between aggressive close chase, cockpit, hood, and dynamic broadcast angles.
+- 🛣️ **Authentic Grand Prix Circuits & Dynamic Banking**:
+  - **Monte Carlo Street Circuit**: Multi-level elevation climb over the city, the Casino plateau, Portier rock tunnel, descent gallery, and viaduct flyover crossing the start straight.
+  - **Spa-Francorchamps**: The Ardennes roller-coaster with the iconic downhill into La Source, 40 m elevation climb through Eau Rouge and Raidillon, and flat-out Kemmel Straight.
+  - **Autodromo Nazionale Monza**: The Temple of Speed in the royal park featuring Rettifilo, Curva Grande, Ascari, and the Parabolica.
+  - **Silverstone Circuit**: High-speed sweepers with Maggotts-Becketts-Chapel and the Hangar Straight perimeter underpass.
+  - **Suzuka Circuit**: The iconic figure-eight layout with the Esses, Degner curves, and 130R underpass.
+- 🚇 **Procedural 3D Tunnel System & Flyover Viaducts**: Arched concrete vault roofs, illuminated overhead fluorescent tube lights, structural bridge piers, and realistic concrete soffits.
+- 🔊 **Dynamic Audio Acoustics & Slap-Back Echo**: Multi-tap acoustic reverberation when accelerating under tunnel vaults, simulating the thunderous roar of a V6 turbo-hybrid in enclosed spaces.
+- ☀️ **HDR Lighting Transitions & Eye Adaptation**: Sunlight dimming inside subterranean sectors with a blinding whiteout bloom burst upon exiting into daylight.
+- 🎥 **Multi-Angle Cameras**: Seamless toggling between aggressive close chase, far chase, authentic driver-eye cockpit view behind the halo visor, TV broadcast roll-hoop T-cam, and dynamic trackside cameras.
 - 🎨 **PBR Shading & Post-Processing**: Custom cinematic film-grade color grading shaders, lens flare effects, and physically based car materials.
 
 ---
